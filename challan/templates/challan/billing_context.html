@@ -69,11 +69,6 @@
         {{ form.challans.errors }}
       </div>
 
-      <div class="form-group full checkbox-row" style="margin-top:16px;">
-        {{ form.adjust_requested }}
-        <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
-      </div>
-
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Challan Out</button>
         <a class="btn btn-outline" href="{% url 'challan:dashboard' %}">Cancel</a>

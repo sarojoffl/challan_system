@@ -1,1 +1,4 @@
-Django>=5.0,<6.2
+asgiref==3.12.1
+Django==6.1
+python-dotenv==1.2.2
+sqlparse==0.5.5

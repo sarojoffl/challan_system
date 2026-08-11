@@ -128,7 +128,6 @@ class BillingContextForm(forms.Form):
         widget=forms.CheckboxSelectMultiple,
         label="Pending Challans",
     )
-    adjust_requested = forms.BooleanField(label="Adjust", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

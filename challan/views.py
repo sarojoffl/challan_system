@@ -207,12 +207,13 @@ def billing_context(request):
         form = BillingContextForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
+                challans = form.cleaned_data["challans"]
+                is_adjustment = any(c.adjust_requested for c in challans)
                 billing = Billing.objects.create(
                     company_name=form.cleaned_data["company_name"],
                     client=form.cleaned_data["client"],
-                    adjust_requested=form.cleaned_data["adjust_requested"],
+                    adjust_requested=is_adjustment,
                 )
-                challans = form.cleaned_data["challans"]
                 billing.challans.set(challans)
                 challans.update(is_billed_out=True, billed_out_at=timezone.now())
             messages.success(
