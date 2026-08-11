@@ -1,0 +1,22 @@
+{% extends "challan/base.html" %}
+{% block title %}Void {{ challan.challan_no }}{% endblock %}
+{% block page_title %}Void Challan{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px;">
+  <div class="card-header"><h3>Void {{ challan.challan_no }}</h3></div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group full">
+        <label>Reason <span class="req">*</span></label>
+        {{ form.void_reason }}
+        {{ form.void_reason.errors }}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Confirm Void</button>
+        <a class="btn btn-outline" href="{% url 'challan:challan_detail' challan.pk %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

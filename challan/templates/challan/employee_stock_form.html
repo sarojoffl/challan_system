@@ -1,0 +1,95 @@
+{% extends "challan/base.html" %}
+{% block title %}Employee Stock — Challan System{% endblock %}
+{% block page_title %}Stock / Hand Challan for Employees{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Issue stock to an individual</span>
+    <h2>Employee Stock Hand Challan</h2>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Individual Name <span class="req">*</span></label>
+          <input list="employee-list" name="employee_name" required value="{{ form.employee_name.value|default:'' }}">
+          <datalist id="employee-list">
+            {% for name in employees %}<option value="{{ name }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>For Which Client (optional)</label>
+          <input type="text" name="client_name" placeholder="Leave blank for internal / employee stock">
+        </div>
+        <div class="form-group">
+          <label>Delivered By <span class="req">*</span></label>
+          {{ form.delivered_by }}
+        </div>
+        <div class="form-group full checkbox-row">
+          {{ form.adjust_requested }}
+          <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:22px;">
+        <div class="card-header"><h3>Item Details <span style="font-weight:500;text-transform:none;font-size:0.78rem;color:var(--color-ink-muted);">(dropdown of stock items — qty is deducted)</span></h3></div>
+        <div class="card-body">
+          {{ formset.management_form }}
+          <div id="item-rows">
+            {% for item_form in formset %}
+              <div class="formset-row item-row" style="grid-template-columns:1fr 100px 40px;">
+                <div class="form-group"><label>Stock Item</label>{{ item_form.stock_item }}</div>
+                <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
+                <div class="delete-cell">{{ item_form.DELETE }}</div>
+                {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit</button>
+        <a class="btn btn-outline" href="{% url 'challan:dashboard' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if employees %}
+<div class="card">
+  <div class="card-header"><h3>Individual Name List</h3></div>
+  <div class="card-body">
+    <div class="btn-row">
+      {% for name in employees %}
+        <a class="btn btn-outline btn-sm" href="{% url 'challan:employee_stock_overview' name %}">{{ name }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.getElementById('add-item-btn').addEventListener('click', function () {
+  const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+  const index = parseInt(totalForms.value, 10);
+  const row = document.querySelector('.item-row').cloneNode(true);
+  row.querySelectorAll('input, select').forEach(function (el) {
+    const name = el.getAttribute('name');
+    if (!name) return;
+    const newName = name.replace(/items-\d+-/, 'items-' + index + '-');
+    el.setAttribute('name', newName);
+    el.setAttribute('id', 'id_' + newName);
+    if (el.type === 'checkbox') { el.checked = false; } else { el.value = ''; }
+  });
+  document.getElementById('item-rows').appendChild(row);
+  totalForms.value = index + 1;
+});
+</script>
+{% endblock %}

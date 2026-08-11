@@ -1,0 +1,38 @@
+{% extends "challan/base.html" %}
+{% block title %}{{ employee_name }} — Stock Overview{% endblock %}
+{% block page_title %}Stock Overview: {{ employee_name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Individual</span>
+    <h2>{{ employee_name }}</h2>
+  </div>
+  <a class="btn btn-outline" href="{% url 'challan:employee_stock_form' %}">← Back to Employee Stock</a>
+</div>
+
+{% for allocation in allocations %}
+<div class="card">
+  <div class="card-header">
+    <h3>{{ allocation.challan.challan_no }} — {{ allocation.created_at|date:"d M Y" }}</h3>
+    <a class="btn btn-outline btn-sm" href="{% url 'challan:challan_detail' allocation.challan.pk %}">View Challan</a>
+  </div>
+  <div class="card-body">
+    <p style="margin-bottom:12px;"><strong>Delivered By:</strong> {{ allocation.delivered_by|default:"—" }}
+      &nbsp;|&nbsp; <strong>Adjust:</strong> {% if allocation.adjust_requested %}Yes{% else %}No{% endif %}</p>
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Item</th><th>Qty Issued</th></tr></thead>
+        <tbody>
+          {% for item in allocation.items.all %}
+          <tr><td>{{ item.stock_item }}</td><td>{{ item.quantity }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="empty-state"><strong>No stock issued yet</strong><p>No hand challan stock records for {{ employee_name }}.</p></div>
+{% endfor %}
+{% endblock %}

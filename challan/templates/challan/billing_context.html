@@ -1,0 +1,84 @@
+{% extends "challan/base.html" %}
+{% block title %}Billing Context — Challan System{% endblock %}
+{% block page_title %}Billing Context{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Bill out approved challans</span>
+    <h2>Billing Context</h2>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="notice error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="get" style="margin-bottom:18px;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Client's Name</label>
+          <select name="client" onchange="this.form.submit()">
+            <option value="">— Select a client —</option>
+            {% for choice in form.client.field.queryset %}
+              <option value="{{ choice.pk }}" {% if form.client.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+            {% endfor %}
+          </select>
+          <p class="help-text">Selecting a client reloads the page and shows only their pending, un-billed, approved challans.</p>
+        </div>
+      </div>
+    </form>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Specific Company Name <span class="req">*</span></label>
+          {{ form.company_name }}
+          {{ form.company_name.errors }}
+        </div>
+        <input type="hidden" name="client" value="{{ form.client.value|default:'' }}">
+      </div>
+
+      <div class="form-group full" style="margin-top:16px;">
+        <label>Pending Challans</label>
+        {% if form.fields.challans.queryset %}
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th></th><th>Challan No.</th><th>Client</th><th>Created</th></tr></thead>
+              <tbody>
+                {% for challan in form.fields.challans.queryset %}
+                <tr>
+                  <td><input type="checkbox" name="challans" value="{{ challan.pk }}"></td>
+                  <td>{{ challan.challan_no }}</td>
+                  <td>{{ challan.client.name }}</td>
+                  <td>{{ challan.created_at|date:"d M Y" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <strong>No eligible challans</strong>
+            <p>Select a client above to see their approved, un-billed challans.</p>
+          </div>
+        {% endif %}
+        {{ form.challans.errors }}
+      </div>
+
+      <div class="form-group full checkbox-row" style="margin-top:16px;">
+        {{ form.adjust_requested }}
+        <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Challan Out</button>
+        <a class="btn btn-outline" href="{% url 'challan:dashboard' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

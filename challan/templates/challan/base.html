@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Challan System{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+<div class="app">
+  {% if user.is_authenticated %}
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-name">Challan System</span>
+      <span class="brand-sub">Delivery &amp; Stock</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'challan:dashboard' %}">Dashboard</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'initiation_form' %}active{% endif %}" href="{% url 'challan:initiation_form' %}">Initiation Form</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'hand_challan_form' %}active{% endif %}" href="{% url 'challan:hand_challan_form' %}">Hand Challan</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'billing_context' %}active{% endif %}" href="{% url 'challan:billing_context' %}">Billing Context</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'employee_stock_form' %}active{% endif %}" href="{% url 'challan:employee_stock_form' %}">Employee Stock</a>
+    </nav>
+    <div class="sidebar-foot">
+      Signed in as <strong>{{ user.get_username }}</strong><br>
+      <a href="{% url 'logout' %}">Log out</a>
+    </div>
+  </aside>
+  {% endif %}
+  <div class="main">
+    {% if user.is_authenticated %}
+    <div class="topbar">
+      <h1>{% block page_title %}Challan System{% endblock %}</h1>
+      <div class="topbar-right">
+        <span class="user-chip">{{ user.get_username }}</span>
+      </div>
+    </div>
+    {% endif %}
+    <div class="content">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="notice {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

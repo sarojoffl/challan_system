@@ -1,0 +1,115 @@
+{% extends "challan/base.html" %}
+{% block title %}Stock Intake — Challan System{% endblock %}
+{% block page_title %}Stock Intake{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Inventory</span>
+    <h2>Stock: Intake</h2>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Add New Stock Item</h3></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="new_item">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Item Name <span class="req">*</span></label>
+          {{ item_form.name }}
+        </div>
+        <div class="form-group">
+          <label>Disposable / Non-disposable</label>
+          <select name="item-is_disposable">
+            <option value="True">Disposable</option>
+            <option value="False">Non-disposable</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Brand / Model</label>
+          {{ item_form.brand }}
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          {{ item_form.model }}
+        </div>
+        <div class="form-group">
+          <label>S.N.</label>
+          {{ item_form.serial_number }}
+        </div>
+        <div class="form-group">
+          <label>For Which Client</label>
+          <select name="item-for_client">
+            <option value="">— None / general stock —</option>
+            {% for client in clients %}
+              <option value="{{ client.pk }}">{{ client.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Qty <span class="req">*</span></label>
+          <input type="number" name="item-starting_quantity" min="0" value="0">
+        </div>
+      </div>
+      {% if item_form.errors %}<div class="notice error">Please check the fields above.</div>{% endif %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Top Up Existing Stock</h3></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="intake">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Stock Item <span class="req">*</span></label>
+          {{ intake_form.stock_item }}
+        </div>
+        <div class="form-group">
+          <label>For Which Client</label>
+          {{ intake_form.for_client }}
+        </div>
+        <div class="form-group">
+          <label>Qty <span class="req">*</span></label>
+          {{ intake_form.quantity }}
+        </div>
+      </div>
+      {% if intake_form.errors %}<div class="notice error">Please check the fields above.</div>{% endif %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Current Stock</h3></div>
+  <div class="table-responsive">
+    <table>
+      <thead><tr><th>Name</th><th>Brand</th><th>Model</th><th>S.N.</th><th>Type</th><th>Available Qty</th></tr></thead>
+      <tbody>
+        {% for item in stock_items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.brand|default:"—" }}</td>
+          <td>{{ item.model|default:"—" }}</td>
+          <td>{{ item.serial_number|default:"—" }}</td>
+          <td>{% if item.is_disposable %}Disposable{% else %}Non-disposable{% endif %}</td>
+          <td>{{ item.quantity_available }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty-state">No stock items yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

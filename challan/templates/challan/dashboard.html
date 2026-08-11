@@ -1,0 +1,92 @@
+{% extends "challan/base.html" %}
+{% block title %}Dashboard — Challan System{% endblock %}
+{% block page_title %}Challan Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Overview</span>
+    <h2>Challan Dashboard</h2>
+  </div>
+  <div class="btn-row">
+    <a href="{% url 'challan:initiation_form' %}" class="btn btn-primary">+ New Challan</a>
+    <a href="{% url 'challan:hand_challan_form' %}" class="btn btn-outline">+ Hand Challan</a>
+  </div>
+</div>
+
+<div class="stat-strip">
+  <a class="stat-card" href="?status=all">
+    <span class="stat-label">All Challans</span>
+    <span class="stat-value">{{ counts.all }}</span>
+  </a>
+  <a class="stat-card amber" href="?status=pending">
+    <span class="stat-label">Pending</span>
+    <span class="stat-value">{{ counts.pending }}</span>
+  </a>
+  <a class="stat-card success" href="?status=approved">
+    <span class="stat-label">Approved</span>
+    <span class="stat-value">{{ counts.approved }}</span>
+  </a>
+  <a class="stat-card danger" href="?status=void">
+    <span class="stat-label">Void</span>
+    <span class="stat-value">{{ counts.void }}</span>
+  </a>
+</div>
+
+{% if overdue_challans %}
+<div class="notice warn">
+  <strong>{{ overdue_challans|length }} pending challan(s)</strong> are past the {{ void_window_days }}-day window —
+  the client should be prompted to extend, change the challan no., or void.
+  {% for c in overdue_challans %}
+    <a href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a>{% if not forloop.last %}, {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="filter-tabs">
+  <a class="filter-tab {% if status_filter == 'all' %}active{% endif %}" href="?status=all">All</a>
+  <a class="filter-tab {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending">Pending</a>
+  <a class="filter-tab {% if status_filter == 'approved' %}active{% endif %}" href="?status=approved">Approved</a>
+  <a class="filter-tab {% if status_filter == 'void' %}active{% endif %}" href="?status=void">Void</a>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Challans</h3></div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Challan No.</th>
+          <th>Type</th>
+          <th>Client</th>
+          <th>Quotation Based</th>
+          <th>Status</th>
+          <th>Adjust</th>
+          <th>Billed Out</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in challans %}
+        <tr>
+          <td><a class="job-num" href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a></td>
+          <td>{{ c.get_challan_type_display }}</td>
+          <td>{{ c.client.name }}</td>
+          <td>{% if c.is_quotation_based %}Yes{% else %}No{% endif %}</td>
+          <td>
+            {% if c.status == 'pending' %}<span class="stamp pending">Pending</span>
+            {% elif c.status == 'approved' %}<span class="stamp approved">Approved</span>
+            {% else %}<span class="stamp void">Void</span>{% endif %}
+          </td>
+          <td>{% if c.adjust_requested %}<span class="stamp neutral">Yes</span>{% else %}—{% endif %}</td>
+          <td>{% if c.is_billed_out %}<span class="stamp approved">Billed</span>{% else %}—{% endif %}</td>
+          <td>{{ c.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8"><div class="empty-state"><strong>No challans yet</strong><p>Create one from the Initiation Form or Hand Challan.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
