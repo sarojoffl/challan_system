@@ -149,6 +149,8 @@ tbody tr:hover td { background: rgba(16,21,34,0.03); }
 .btn-success:hover { background: var(--color-success); color: #fff; }
 .btn-danger { background: var(--color-danger-bg); color: var(--color-danger-text); border-color: var(--color-danger-border); }
 .btn-danger:hover { background: var(--color-danger); color: #fff; }
+.btn-warning { background: #fff8e7; color: #92600a; border-color: #f0c060; }
+.btn-warning:hover { background: #f0a000; color: #fff; border-color: #f0a000; }
 .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }

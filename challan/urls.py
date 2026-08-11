@@ -7,9 +7,11 @@ app_name = "challan"
 urlpatterns = [
     path("", views.challan_dashboard, name="dashboard"),
     path("challan/<int:pk>/", views.challan_detail, name="challan_detail"),
+    path("challan/<int:pk>/edit/", views.challan_edit, name="challan_edit"),
     path("challan/<int:pk>/approve/", views.challan_approve, name="challan_approve"),
     path("challan/<int:pk>/void/", views.challan_void, name="challan_void"),
     path("challan/<int:pk>/unlock/", views.challan_unlock, name="challan_unlock"),
+    path("challan/<int:pk>/extend/", views.challan_extend, name="challan_extend"),
     path(
         "challan/<int:pk>/change-no/",
         views.challan_no_change,

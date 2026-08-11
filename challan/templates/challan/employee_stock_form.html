@@ -36,23 +36,21 @@
         </div>
       </div>
 
-      <div id="goods-detail-section" style="display:none;">
-        <div class="card" style="margin-top:22px;">
-          <div class="card-header"><h3>Item Details <span style="font-weight:500;text-transform:none;font-size:0.78rem;color:var(--color-ink-muted);">(dropdown of stock items — qty is deducted)</span></h3></div>
-          <div class="card-body">
-            {{ formset.management_form }}
-            <div id="item-rows">
-              {% for item_form in formset %}
-                <div class="formset-row item-row" style="grid-template-columns:1fr 100px 40px;">
-                  <div class="form-group"><label>Stock Item</label>{{ item_form.stock_item }}</div>
-                  <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
-                  <div class="delete-cell">{{ item_form.DELETE }}</div>
-                  {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
-                </div>
-              {% endfor %}
-            </div>
-            <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
+      <div class="card" style="margin-top:22px;">
+        <div class="card-header"><h3>Item Details <span style="font-weight:500;text-transform:none;font-size:0.78rem;color:var(--color-ink-muted);">(dropdown of stock items — qty is deducted)</span></h3></div>
+        <div class="card-body">
+          {{ formset.management_form }}
+          <div id="item-rows">
+            {% for item_form in formset %}
+              <div class="formset-row item-row" style="grid-template-columns:1fr 100px 40px;">
+                <div class="form-group"><label>Stock Item</label>{{ item_form.stock_item }}</div>
+                <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
+                <div class="delete-cell">{{ item_form.DELETE }}</div>
+                {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
           </div>
+          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
         </div>
       </div>
 
@@ -78,14 +76,6 @@
 {% endif %}
 
 <script>
-(function () {
-  var cb = document.getElementById('{{ form.adjust_requested.id_for_label }}');
-  var section = document.getElementById('goods-detail-section');
-  function toggle() { section.style.display = cb.checked ? '' : 'none'; }
-  cb.addEventListener('change', toggle);
-  toggle();
-})();
-
 document.getElementById('add-item-btn').addEventListener('click', function () {
   const totalForms = document.getElementById('id_items-TOTAL_FORMS');
   const index = parseInt(totalForms.value, 10);

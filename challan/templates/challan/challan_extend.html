@@ -1,0 +1,28 @@
+{% extends "challan/base.html" %}
+{% block title %}Extend Challan — {{ challan.challan_no }}{% endblock %}
+{% block page_title %}Extend Challan {{ challan.challan_no }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;">
+  <div class="card-header"><h3>Request 3-Day Extension</h3></div>
+  <div class="card-body">
+    <div class="notice warn" style="margin-bottom:20px;">
+      <strong>One-time extension only.</strong> This challan is overdue (past its 3-day window).
+      Extending will keep it active until <strong>day 7</strong> — i.e., locked at
+      <strong>{{ challan.overdue_lock_deadline|date:"d M Y, H:i" }}</strong>. A reason is required.
+      No further extension will be possible after this.
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group full" style="margin-bottom:14px;">
+        <label>{{ form.reason.label }} <span class="req">*</span></label>
+        {{ form.reason }}
+        {{ form.reason.errors }}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-warning">Extend by 3 Days</button>
+        <a class="btn btn-outline" href="{% url 'challan:challan_detail' challan.pk %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

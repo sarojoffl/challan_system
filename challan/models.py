@@ -6,8 +6,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 
-VOID_WINDOW_DAYS = 3
-PENDING_REMINDER_DAYS = 7  # "after 3-day due date, then after 1 week" reminder cycle
+VOID_WINDOW_DAYS = 3       # initial active window (days)
+OVERDUE_LOCK_DAYS = 7      # if not extended by day 7, challan locks
 
 
 class Client(models.Model):
@@ -71,6 +71,8 @@ class Challan(models.Model):
     delivered_by = models.CharField(max_length=255, blank=True)
     received_by_name = models.CharField(max_length=255, blank=True)
     received_by_phone = models.CharField(max_length=30, blank=True)
+    personal_details_name = models.CharField(max_length=255, blank=True)
+    personal_details_phone = models.CharField(max_length=30, blank=True)
 
     # Billing state
     is_billed_out = models.BooleanField(default=False)
@@ -79,6 +81,10 @@ class Challan(models.Model):
     # Lock/void window & pending reminder tracking
     locked = models.BooleanField(default=False)
     unlocked_by_admin = models.BooleanField(default=False)
+    # Extension: one-time 3-day extension after the initial 3-day window
+    extension_days = models.PositiveIntegerField(default=0)  # 0 = not extended, 3 = extended
+    extended_at = models.DateTimeField(null=True, blank=True)  # when the extension was granted
+    extend_reason = models.TextField(blank=True)              # required reason for extension
     last_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     created_by = models.ForeignKey(
@@ -124,30 +130,91 @@ class Challan(models.Model):
         return f"{prefix}-{seq:03d}"
 
     # ------------------------------------------------------------------
-    # Void / lock window logic — "Time duration for user to void: 3 days.
-    # Replacement adjust/material unlock; void greyed out (locked) after
-    # 3 days unless admin unlocks."
+    # Void / lock window logic
+    # Timeline:
+    #   Day 0–3  : active (void/edit freely)
+    #   Day 3–7  : overdue — one-time extend available WITH reason
+    #   Day 7+   : locked (admin unlock only)
+    #   If extended: 3 more days from extended_at, then locked
     # ------------------------------------------------------------------
+
     @property
-    def void_deadline(self):
+    def initial_deadline(self):
+        """The original 3-day active window."""
         return self.created_at + datetime.timedelta(days=VOID_WINDOW_DAYS)
 
     @property
+    def overdue_lock_deadline(self):
+        """Day 7 — if not extended by then, challan locks."""
+        return self.created_at + datetime.timedelta(days=OVERDUE_LOCK_DAYS)
+
+    @property
+    def extension_deadline(self):
+        """When the one-time extension expires.
+        Always the full 7-day mark from creation, so extending gives
+        the challan until day 7 regardless of when the extension was taken."""
+        if self.extension_days > 0 and self.extended_at:
+            return self.overdue_lock_deadline
+        return None
+
+    @property
+    def void_deadline(self):
+        """The effective latest active deadline (used in templates)."""
+        if self.extension_deadline:
+            return self.extension_deadline
+        return self.initial_deadline
+
+    @property
     def can_void(self):
+        """True if the challan can still be acted on (voided / edited)."""
         if self.status != self.Status.PENDING:
             return False
         if self.unlocked_by_admin:
             return True
-        return timezone.now() <= self.void_deadline
+        now = timezone.now()
+        if now <= self.initial_deadline:
+            return True
+        # Extended window
+        if self.extension_deadline and now <= self.extension_deadline:
+            return True
+        return False
+
+    @property
+    def can_extend(self):
+        """True only when:
+        - still pending
+        - past the initial 3-day window (overdue)
+        - within the 7-day lock deadline
+        - not yet extended (one-time only)
+        - not admin-unlocked
+        """
+        if self.status != self.Status.PENDING:
+            return False
+        if self.extension_days > 0:   # already extended once
+            return False
+        if self.unlocked_by_admin:
+            return False
+        now = timezone.now()
+        return self.initial_deadline < now <= self.overdue_lock_deadline
 
     @property
     def is_overdue_for_reminder(self):
-        """Pending Challan time limit 3-days -> after due date, remind
-        again every 1 week until the user updates (extend / change
-        challan no. / void)."""
+        """Pending challan past its initial 3-day window — show the overdue banner."""
         if self.status != self.Status.PENDING:
             return False
-        return timezone.now() > self.void_deadline
+        return timezone.now() > self.initial_deadline
+
+    @property
+    def is_locked_out(self):
+        """Truly locked: past day 7 without extension, or extension expired,
+        and not admin-unlocked."""
+        if self.status != self.Status.PENDING:
+            return False
+        if self.unlocked_by_admin:
+            return False
+        if self.can_void or self.can_extend:
+            return False
+        return True
 
     def get_absolute_url(self):
         return reverse("challan:challan_detail", args=[self.pk])

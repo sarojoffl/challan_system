@@ -27,30 +27,52 @@
           <label>Delivered By <span class="req">*</span></label>
           {{ form.delivered_by }}
         </div>
+        <div id="received-by-section" style="display: contents;">
+          <div class="form-group">
+            <label>Received By — Name</label>
+            {{ form.received_by_name }}
+            {{ form.received_by_name.errors }}
+          </div>
+          <div class="form-group">
+            <label>Phone No.</label>
+            {{ form.received_by_phone }}
+            {{ form.received_by_phone.errors }}
+          </div>
+        </div>
+        <div id="personal-details-section" style="display: none;">
+          <div class="form-group">
+            <label>Personal Details — Name <span class="req">*</span></label>
+            {{ form.personal_details_name }}
+            {{ form.personal_details_name.errors }}
+          </div>
+          <div class="form-group">
+            <label>Phone No.</label>
+            {{ form.personal_details_phone }}
+            {{ form.personal_details_phone.errors }}
+          </div>
+        </div>
         <div class="form-group checkbox-row" style="align-self:start;">
           {{ form.adjust_requested }}
           <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
         </div>
       </div>
 
-      <div id="goods-detail-section" style="display:none;">
-        <div class="card" style="margin-top:22px;">
-          <div class="card-header"><h3>Goods Detail <span style="font-weight:500;text-transform:none;font-size:0.78rem;color:var(--color-ink-muted);">(same as Initiation Form)</span></h3></div>
-          <div class="card-body">
-            {{ formset.management_form }}
-            <div id="item-rows">
-              {% for item_form in formset %}
-                <div class="formset-row item-row">
-                  <div class="form-group"><label>S.N.</label>{{ item_form.serial_number }}</div>
-                  <div class="form-group"><label>Item</label>{{ item_form.product_name }}</div>
-                  <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
-                  <div class="delete-cell">{{ item_form.DELETE }}</div>
-                  {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
-                </div>
-              {% endfor %}
-            </div>
-            <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
+      <div class="card" style="margin-top:22px;">
+        <div class="card-header"><h3>Goods Detail <span style="font-weight:500;text-transform:none;font-size:0.78rem;color:var(--color-ink-muted);">(same as Initiation Form)</span></h3></div>
+        <div class="card-body">
+          {{ formset.management_form }}
+          <div id="item-rows">
+            {% for item_form in formset %}
+              <div class="formset-row item-row">
+                <div class="form-group"><label>S.N.</label>{{ item_form.serial_number }}</div>
+                <div class="form-group"><label>Item</label>{{ item_form.product_name }}</div>
+                <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
+                <div class="delete-cell">{{ item_form.DELETE }}</div>
+                {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
           </div>
+          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
         </div>
       </div>
 
@@ -74,10 +96,24 @@
 <script>
 (function () {
   var cb = document.getElementById('{{ form.adjust_requested.id_for_label }}');
-  var section = document.getElementById('goods-detail-section');
-  function toggle() { section.style.display = cb.checked ? '' : 'none'; }
-  cb.addEventListener('change', toggle);
-  toggle();
+  var receivedSec = document.getElementById('received-by-section');
+  var personalSec = document.getElementById('personal-details-section');
+  var nameInput = document.getElementById('{{ form.personal_details_name.id_for_label }}');
+  
+  function updateLayout() {
+    if (cb.checked) {
+      receivedSec.style.display = 'none';
+      personalSec.style.display = 'contents';
+      nameInput.setAttribute('required', 'required');
+    } else {
+      receivedSec.style.display = 'contents';
+      personalSec.style.display = 'none';
+      nameInput.removeAttribute('required');
+    }
+  }
+  
+  cb.addEventListener('change', updateLayout);
+  updateLayout();
 })();
 
 document.getElementById('add-item-btn').addEventListener('click', function () {

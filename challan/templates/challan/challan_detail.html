@@ -16,25 +16,44 @@
       </form>
       {% if challan.can_void %}
         <a class="btn btn-danger" href="{% url 'challan:challan_void' challan.pk %}">Void</a>
+        <a class="btn btn-outline" href="{% url 'challan:challan_edit' challan.pk %}">Edit</a>
       {% else %}
-        <button class="btn btn-danger" disabled title="Locked — past {{ challan.void_deadline }}">Void (locked)</button>
+        <button class="btn btn-danger" disabled title="Locked — challan window expired">Void (locked)</button>
+        <button class="btn btn-outline" disabled title="Locked — challan window expired">Edit (locked)</button>
         {% if user.is_staff %}
         <form method="post" action="{% url 'challan:challan_unlock' challan.pk %}" style="display:inline;">
           {% csrf_token %}
-          <button class="btn btn-outline" type="submit">Admin unlock</button>
+          <button class="btn btn-outline" type="submit">Admin Unlock</button>
         </form>
         {% endif %}
+      {% endif %}
+      {# Extend: only available between day 3 and day 7, one-time only #}
+      {% if challan.can_extend %}
+        <a class="btn btn-warning" href="{% url 'challan:challan_extend' challan.pk %}">Extend (+3 Days)</a>
       {% endif %}
       <a class="btn btn-outline" href="{% url 'challan:challan_no_change' challan.pk %}">Change Challan No.</a>
     {% endif %}
   </div>
 </div>
 
-{% if challan.is_overdue_for_reminder %}
-<div class="notice warn">
-  This challan is past its {{ challan.void_deadline|date:"d M Y" }} window. Please update — extend, change the
-  challan no., or void — before it gets locked further.
-</div>
+{# --- Status banners --- #}
+{% if challan.status == 'pending' %}
+  {% if challan.is_locked_out %}
+  <div class="notice error">
+    <strong>🔒 Challan Locked</strong> — This challan has exceeded its allowed window and is now locked.
+    {% if user.is_staff %}An admin can unlock it above.{% else %}Contact an admin to unlock.{% endif %}
+  </div>
+  {% elif challan.can_extend %}
+  <div class="notice warn">
+    <strong>⚠ Overdue</strong> — Past the 3-day window. You can extend once (until day 7) but you must provide a reason.
+    The challan will <strong>lock on {{ challan.overdue_lock_deadline|date:"d M Y, H:i" }}</strong> if not extended.
+  </div>
+  {% elif challan.extension_days > 0 %}
+  <div class="notice warn">
+    <strong>⏳ Extended</strong> — Extended on {{ challan.extended_at|date:"d M Y" }}.
+    Active until <strong>{{ challan.extension_deadline|date:"d M Y, H:i" }}</strong>. No further extension allowed.
+  </div>
+  {% endif %}
 {% endif %}
 
 <div class="card">
@@ -54,8 +73,16 @@
       <div class="ticket-field"><span class="tf-label">Quotation Based</span><span class="tf-value">{% if challan.is_quotation_based %}Yes{% else %}No{% endif %}</span></div>
       <div class="ticket-field"><span class="tf-label">Adjust Requested</span><span class="tf-value">{% if challan.adjust_requested %}Yes — admin approval required{% else %}No{% endif %}</span></div>
       <div class="ticket-field"><span class="tf-label">Delivered By</span><span class="tf-value {% if not challan.delivered_by %}empty{% endif %}">{{ challan.delivered_by|default:"—" }}</span></div>
-      <div class="ticket-field"><span class="tf-label">Received By</span><span class="tf-value {% if not challan.received_by_name %}empty{% endif %}">{{ challan.received_by_name|default:"—" }} {% if challan.received_by_phone %}({{ challan.received_by_phone }}){% endif %}</span></div>
-      <div class="ticket-field"><span class="tf-label">Void Window</span><span class="tf-value">{{ challan.void_deadline|date:"d M Y, H:i" }}</span></div>
+      {% if challan.adjust_requested %}
+      <div class="ticket-field"><span class="tf-label">Personal Details — Name</span><span class="tf-value {% if not challan.personal_details_name %}empty{% endif %}">{{ challan.personal_details_name|default:"—" }} {% if challan.personal_details_phone %}({{ challan.personal_details_phone }}){% endif %}</span></div>
+      {% else %}
+      <div class="ticket-field"><span class="tf-label">Received By — Name</span><span class="tf-value {% if not challan.received_by_name %}empty{% endif %}">{{ challan.received_by_name|default:"—" }} {% if challan.received_by_phone %}({{ challan.received_by_phone }}){% endif %}</span></div>
+      {% endif %}
+      <div class="ticket-field"><span class="tf-label">Initial Deadline</span><span class="tf-value">{{ challan.initial_deadline|date:"d M Y, H:i" }}</span></div>
+      {% if challan.extension_days > 0 %}
+      <div class="ticket-field"><span class="tf-label">Extended Deadline</span><span class="tf-value">{{ challan.extension_deadline|date:"d M Y, H:i" }}</span></div>
+      <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Extension Reason</span><span class="tf-value">{{ challan.extend_reason }}</span></div>
+      {% endif %}
       <div class="ticket-field"><span class="tf-label">Billed Out</span><span class="tf-value">{% if challan.is_billed_out %}Yes, {{ challan.billed_out_at|date:"d M Y" }}{% else %}No{% endif %}</span></div>
       {% if challan.void_reason %}
       <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Void Reason</span><span class="tf-value">{{ challan.void_reason }}</span></div>

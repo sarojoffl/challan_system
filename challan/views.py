@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .forms import (
     BillingContextForm,
+    ChallanExtendForm,
     ChallanInitiationForm,
     ChallanItemFormSet,
     ChallanNoChangeForm,
@@ -114,6 +115,42 @@ def challan_unlock(request, pk):
 
 
 @login_required
+def challan_extend(request, pk):
+    """One-time 3-day extension, only allowed between day 3 and day 7,
+    requires a mandatory reason."""
+    challan = get_object_or_404(Challan, pk=pk)
+
+    if challan.status != Challan.Status.PENDING:
+        messages.error(request, "Only pending challans can be extended.")
+        return redirect("challan:challan_detail", pk=pk)
+
+    if not challan.can_extend:
+        if challan.extension_days > 0:
+            messages.error(request, "This challan has already been extended once. No further extension allowed.")
+        else:
+            messages.error(request, "Extension is only available between day 3 and day 7 of a pending challan.")
+        return redirect("challan:challan_detail", pk=pk)
+
+    if request.method == "POST":
+        form = ChallanExtendForm(request.POST)
+        if form.is_valid():
+            challan.extension_days = 3
+            challan.extended_at = timezone.now()
+            challan.extend_reason = form.cleaned_data["reason"]
+            challan.save()
+            messages.success(
+                request,
+                f"Challan {challan.challan_no} extended. "
+                f"Active until day 7: {challan.extension_deadline.strftime('%d %b %Y, %H:%M')}."
+            )
+            return redirect("challan:challan_detail", pk=pk)
+    else:
+        form = ChallanExtendForm()
+
+    return render(request, "challan/challan_extend.html", {"challan": challan, "form": form})
+
+
+@login_required
 def challan_no_change(request, pk):
     """After the 1-week extend cycle, allow changing the challan no. with
     a mandatory reason, per the notes."""
@@ -135,6 +172,57 @@ def challan_no_change(request, pk):
     )
 
 
+@login_required
+def challan_edit(request, pk):
+    """Allows editing of pending, unlocked challan details and its goods items."""
+    challan = get_object_or_404(Challan, pk=pk)
+    if challan.status != Challan.Status.PENDING:
+        messages.error(request, "Only pending challans can be edited.")
+        return redirect("challan:challan_detail", pk=pk)
+    if not challan.can_void:
+        messages.error(request, "This challan is locked. An admin must unlock it first.")
+        return redirect("challan:challan_detail", pk=pk)
+
+    if challan.challan_type == Challan.ChallanType.QUOTATION:
+        FormClass = ChallanInitiationForm
+    else:
+        FormClass = HandChallanForm
+
+    if request.method == "POST":
+        form = FormClass(request.POST, instance=challan)
+        formset = ChallanItemFormSet(request.POST, instance=challan, prefix="items")
+        if form.is_valid() and formset.is_valid():
+            # Goods detail is compulsory — require at least 1 non-deleted item
+            real_items = [
+                f for f in formset.forms
+                if f.cleaned_data and not f.cleaned_data.get("DELETE", False)
+            ]
+            if not real_items:
+                messages.error(request, "Goods Detail is compulsory. Please keep at least one item.")
+            else:
+                with transaction.atomic():
+                    instance = form.save(commit=False)
+                    client_name = form.cleaned_data.get("client_name", "").strip()
+                    if client_name:
+                        from .models import Client
+                        client, _ = Client.objects.get_or_create(name=client_name)
+                        instance.client = client
+                    instance.save()
+                    formset.save()
+                messages.success(request, f"Challan {challan.challan_no} updated successfully.")
+                return redirect("challan:challan_detail", pk=pk)
+    else:
+        initial = {"client_name": challan.client.name}
+        form = FormClass(instance=challan, initial=initial)
+        formset = ChallanItemFormSet(instance=challan, prefix="items")
+
+    return render(
+        request,
+        "challan/challan_edit.html",
+        {"challan": challan, "form": form, "formset": formset},
+    )
+
+
 # ---------------------------------------------------------------------
 # Initiation Form
 # ---------------------------------------------------------------------
@@ -144,16 +232,24 @@ def initiation_form(request):
         form = ChallanInitiationForm(request.POST)
         formset = ChallanItemFormSet(request.POST, prefix="items")
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                challan = form.save(commit=False)
-                challan.created_by = request.user
-                challan.save()
-                formset.instance = challan
-                formset.save()
-            messages.success(
-                request, f"Challan {challan.challan_no} submitted for approval."
-            )
-            return redirect("challan:challan_detail", pk=challan.pk)
+            # Goods detail is compulsory — require at least 1 non-deleted item
+            real_items = [
+                f for f in formset.forms
+                if f.cleaned_data and not f.cleaned_data.get("DELETE", False)
+            ]
+            if not real_items:
+                messages.error(request, "Goods Detail is compulsory. Please add at least one item.")
+            else:
+                with transaction.atomic():
+                    challan = form.save(commit=False)
+                    challan.created_by = request.user
+                    challan.save()
+                    formset.instance = challan
+                    formset.save()
+                messages.success(
+                    request, f"Challan {challan.challan_no} submitted for approval."
+                )
+                return redirect("challan:challan_detail", pk=challan.pk)
     else:
         form = ChallanInitiationForm()
         formset = ChallanItemFormSet(prefix="items")
@@ -173,21 +269,29 @@ def hand_challan_form(request):
         form = HandChallanForm(request.POST)
         formset = ChallanItemFormSet(request.POST, prefix="items")
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                challan = form.save(commit=False)
-                challan.created_by = request.user
-                # Hand challans are considered approved on submit — they
-                # aren't quotation-based and skip the approval gate.
-                challan.status = Challan.Status.APPROVED
-                challan.save()
-                formset.instance = challan
-                formset.save()
-            messages.success(
-                request,
-                f"Hand challan {challan.challan_no} created and merged "
-                f"into the Challan Dashboard.",
-            )
-            return redirect("challan:challan_detail", pk=challan.pk)
+            # Goods detail is compulsory — require at least 1 non-deleted item
+            real_items = [
+                f for f in formset.forms
+                if f.cleaned_data and not f.cleaned_data.get("DELETE", False)
+            ]
+            if not real_items:
+                messages.error(request, "Goods Detail is compulsory. Please add at least one item.")
+            else:
+                with transaction.atomic():
+                    challan = form.save(commit=False)
+                    challan.created_by = request.user
+                    # Hand challans are considered approved on submit — they
+                    # aren't quotation-based and skip the approval gate.
+                    challan.status = Challan.Status.APPROVED
+                    challan.save()
+                    formset.instance = challan
+                    formset.save()
+                messages.success(
+                    request,
+                    f"Hand challan {challan.challan_no} created and merged "
+                    f"into the Challan Dashboard.",
+                )
+                return redirect("challan:challan_detail", pk=challan.pk)
     else:
         form = HandChallanForm()
         formset = ChallanItemFormSet(prefix="items")

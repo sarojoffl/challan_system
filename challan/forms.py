@@ -46,6 +46,8 @@ class ChallanInitiationForm(BaseStyledForm):
             "delivered_by",
             "received_by_name",
             "received_by_phone",
+            "personal_details_name",
+            "personal_details_phone",
             "adjust_requested",
         ]
         labels = {
@@ -53,9 +55,19 @@ class ChallanInitiationForm(BaseStyledForm):
             "challan_no": "Challan No.",
             "contact_name": "Name",
             "is_quotation_based": "Quotation Based",
-            "received_by_name": "Received By (Personal Details Name)",
+            "received_by_name": "Received By — Name",
             "received_by_phone": "Phone No.",
+            "personal_details_name": "Personal Details — Name",
+            "personal_details_phone": "Phone No.",
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        adjust_requested = cleaned.get("adjust_requested")
+        personal_details_name = cleaned.get("personal_details_name")
+        if adjust_requested and not personal_details_name:
+            self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+        return cleaned
 
     def save(self, commit=True):
         client_name = self.cleaned_data["client_name"].strip()
@@ -85,8 +97,30 @@ class HandChallanForm(BaseStyledForm):
 
     class Meta:
         model = Challan
-        fields = ["contact_name", "delivered_by", "adjust_requested"]
-        labels = {"contact_name": "Name"}
+        fields = [
+            "contact_name",
+            "delivered_by",
+            "received_by_name",
+            "received_by_phone",
+            "personal_details_name",
+            "personal_details_phone",
+            "adjust_requested",
+        ]
+        labels = {
+            "contact_name": "Name",
+            "received_by_name": "Received By — Name",
+            "received_by_phone": "Phone No.",
+            "personal_details_name": "Personal Details — Name",
+            "personal_details_phone": "Phone No.",
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        adjust_requested = cleaned.get("adjust_requested")
+        personal_details_name = cleaned.get("personal_details_name")
+        if adjust_requested and not personal_details_name:
+            self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+        return cleaned
 
     def save(self, commit=True):
         client_name = self.cleaned_data["client_name"].strip()
@@ -191,3 +225,13 @@ EmployeeStockChallanItemFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+# ---------------------------------------------------------------------
+# Challan Extend (one-time, requires reason)
+# ---------------------------------------------------------------------
+class ChallanExtendForm(forms.Form):
+    reason = forms.CharField(
+        label="Reason for Extension",
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Explain why this challan needs more time…"}),
+    )

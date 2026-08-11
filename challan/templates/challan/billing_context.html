@@ -52,7 +52,14 @@
                 {% for challan in form.fields.challans.queryset %}
                 <tr>
                   <td><input type="checkbox" name="challans" value="{{ challan.pk }}"></td>
-                  <td>{{ challan.challan_no }}</td>
+                  <td>
+                    <a href="{% url 'challan:challan_detail' challan.pk %}" 
+                       onclick="window.open(this.href, 'challan_popup', 'width=1000,height=750,scrollbars=yes'); return false;"
+                       class="job-num"
+                       style="text-decoration: underline;">
+                      {{ challan.challan_no }}
+                    </a>
+                  </td>
                   <td>{{ challan.client.name }}</td>
                   <td>{{ challan.created_at|date:"d M Y" }}</td>
                 </tr>

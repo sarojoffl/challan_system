@@ -1,12 +1,12 @@
 {% extends "challan/base.html" %}
-{% block title %}Initiation Form — Challan System{% endblock %}
-{% block page_title %}Initiation Form{% endblock %}
+{% block title %}Edit Challan {{ challan.challan_no }} — Challan System{% endblock %}
+{% block page_title %}Edit Challan {{ challan.challan_no }}{% endblock %}
 {% block content %}
 
 <div class="page-head">
   <div>
-    <span class="eyebrow">New Challan</span>
-    <h2>Initiation Form</h2>
+    <span class="eyebrow">Update Challan Details</span>
+    <h2>Edit Challan: {{ challan.challan_no }}</h2>
   </div>
 </div>
 
@@ -15,6 +15,7 @@
     <form method="post" novalidate>
       {% csrf_token %}
       <div class="form-grid">
+        {% if challan.challan_type == 'quotation' %}
         <div class="form-group">
           <label>Billed Company (or Firm) <span class="req">*</span></label>
           {{ form.billed_company }}
@@ -25,26 +26,36 @@
           {{ form.challan_no }}
           {{ form.challan_no.errors }}
         </div>
+        {% endif %}
+        
         <div class="form-group">
           <label>Client's Name <span class="req">*</span></label>
           {{ form.client_name }}
           {{ form.client_name.errors }}
         </div>
+        
         <div class="form-group">
           <label>Name</label>
           {{ form.contact_name }}
+          {{ form.contact_name.errors }}
         </div>
+        
+        {% if challan.challan_type == 'quotation' %}
         <div class="form-group">
           <label>Quotation Based</label>
           <select name="{{ form.is_quotation_based.html_name }}" id="{{ form.is_quotation_based.id_for_label }}">
-            <option value="True">Yes</option>
-            <option value="False">No</option>
+            <option value="True" {% if form.is_quotation_based.value == True %}selected{% endif %}>Yes</option>
+            <option value="False" {% if form.is_quotation_based.value == False %}selected{% endif %}>No</option>
           </select>
         </div>
+        {% endif %}
+        
         <div class="form-group">
           <label>Delivered By <span class="req">*</span></label>
           {{ form.delivered_by }}
+          {{ form.delivered_by.errors }}
         </div>
+        
         <div id="received-by-section" style="display: contents;">
           <div class="form-group">
             <label>Received By — Name</label>
@@ -57,6 +68,7 @@
             {{ form.received_by_phone.errors }}
           </div>
         </div>
+        
         <div id="personal-details-section" style="display: none;">
           <div class="form-group">
             <label>Personal Details — Name <span class="req">*</span></label>
@@ -69,9 +81,10 @@
             {{ form.personal_details_phone.errors }}
           </div>
         </div>
+        
         <div class="form-group checkbox-row" style="align-self:start;">
           {{ form.adjust_requested }}
-          <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust (admin approval will be required if checked)</label>
+          <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
         </div>
       </div>
 
@@ -95,8 +108,8 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Submit</button>
-        <a class="btn btn-outline" href="{% url 'challan:dashboard' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a class="btn btn-outline" href="{% url 'challan:challan_detail' challan.pk %}">Cancel</a>
       </div>
     </form>
   </div>
