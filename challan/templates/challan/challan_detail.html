@@ -83,7 +83,8 @@
       <div class="ticket-field"><span class="tf-label">Extended Deadline</span><span class="tf-value">{{ challan.extension_deadline|date:"d M Y, H:i" }}</span></div>
       <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Extension Reason</span><span class="tf-value">{{ challan.extend_reason }}</span></div>
       {% endif %}
-      <div class="ticket-field"><span class="tf-label">Billed Out</span><span class="tf-value">{% if challan.is_billed_out %}Yes, {{ challan.billed_out_at|date:"d M Y" }}{% else %}No{% endif %}</span></div>
+      <div class="ticket-field"><span class="tf-label">Billed Out</span><span class="tf-value">{% if challan.is_billed_out %}<span class="stamp approved">Yes</span>{% else %}No{% endif %}</span></div>
+
       {% if challan.void_reason %}
       <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Void Reason</span><span class="tf-value">{{ challan.void_reason }}</span></div>
       {% endif %}
@@ -93,6 +94,25 @@
     </div>
   </div>
 </div>
+
+{% if challan.is_billed_out %}
+{% with billing=challan.billing_entries.first %}
+<div class="card" style="border-left: 3px solid var(--color-success);">
+  <div class="card-header" style="display:flex;align-items:center;gap:10px;">
+    <h3 style="margin:0;">Billing Details</h3>
+    <span class="stamp approved" style="font-size:0.72rem;">Billed Out</span>
+  </div>
+  <div class="card-body">
+    <div class="ticket-fields">
+      <div class="ticket-field"><span class="tf-label">Specific Company Name</span><span class="tf-value {% if not billing.company_name %}empty{% endif %}">{{ billing.company_name|default:"—" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Billed On</span><span class="tf-value">{{ challan.billed_out_at|date:"d M Y, H:i" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Billing Record #</span><span class="tf-value">#{{ billing.pk }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Client</span><span class="tf-value">{{ billing.client }}</span></div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endif %}
 
 <div class="card">
   <div class="card-header"><h3>Goods Detail</h3></div>

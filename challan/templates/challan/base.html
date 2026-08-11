@@ -22,6 +22,7 @@
       <a class="nav-item {% if request.resolver_match.url_name == 'initiation_form' %}active{% endif %}" href="{% url 'challan:initiation_form' %}">Initiation Form</a>
       <a class="nav-item {% if request.resolver_match.url_name == 'hand_challan_form' %}active{% endif %}" href="{% url 'challan:hand_challan_form' %}">Hand Challan</a>
       <a class="nav-item {% if request.resolver_match.url_name == 'billing_context' %}active{% endif %}" href="{% url 'challan:billing_context' %}">Billing Context</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'billing_history_list' or request.resolver_match.url_name == 'billing_detail' %}active{% endif %}" href="{% url 'challan:billing_history_list' %}">Billing History</a>
       <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
       <a class="nav-item {% if request.resolver_match.url_name == 'employee_stock_form' %}active{% endif %}" href="{% url 'challan:employee_stock_form' %}">Employee Stock</a>
     </nav>

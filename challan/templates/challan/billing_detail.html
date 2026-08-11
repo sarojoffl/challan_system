@@ -1,0 +1,96 @@
+{% extends "challan/base.html" %}
+{% block title %}Billing Receipt #{{ billing.pk }} — Challan System{% endblock %}
+{% block page_title %}Billing Receipt #{{ billing.pk }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Billing details &amp; consolidated summary</span>
+    <h2>Billing Receipt #{{ billing.pk }}</h2>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-outline" href="{% url 'challan:billing_history_list' %}">← Back to History</a>
+  </div>
+</div>
+
+<div class="card" style="border-left: 3px solid var(--color-success);">
+  <div class="card-header"><h3>Receipt Info</h3></div>
+  <div class="card-body">
+    <div class="ticket-fields">
+      <div class="ticket-field">
+        <span class="tf-label">Billing Record ID</span>
+        <span class="tf-value">#{{ billing.pk }}</span>
+      </div>
+      <div class="ticket-field">
+        <span class="tf-label">Specific Company Name</span>
+        <span class="tf-value">{{ billing.company_name }}</span>
+      </div>
+      <div class="ticket-field">
+        <span class="tf-label">Client Name</span>
+        <span class="tf-value">{{ billing.client.name }}</span>
+      </div>
+      <div class="ticket-field">
+        <span class="tf-label">Billed Date</span>
+        <span class="tf-value">{{ billing.created_at|date:"d M Y, H:i" }}</span>
+      </div>
+      <div class="ticket-field">
+        <span class="tf-label">Adjust Included?</span>
+        <span class="tf-value">
+          {% if billing.adjust_requested %}
+            <span class="stamp warn">Yes — adjustment/replacement goods</span>
+          {% else %}
+            <span class="stamp neutral">No</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Linked Challans</h3></div>
+  <div class="card-body">
+    <p style="margin-bottom:12px; font-size:0.9rem; color:var(--color-ink-muted);">
+      This billing receipt groups the following approved challans together:
+    </p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      {% for challan in billing.challans.all %}
+        <a href="{% url 'challan:challan_detail' challan.pk %}" class="stamp neutral" style="padding:8px 12px; text-decoration:underline; font-weight:bold;">
+          {{ challan.challan_no }} ({{ challan.get_challan_type_display }})
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>Consolidated Goods Summary</h3></div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>S.N.</th>
+          <th>Item / Product Name</th>
+          <th>Total Billed Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, qty in consolidated_items %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><strong>{{ name }}</strong></td>
+          <td>{{ qty }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">No items were found on the linked challans.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -307,32 +307,57 @@ def hand_challan_form(request):
 # ---------------------------------------------------------------------
 @login_required
 def billing_context(request):
+    client_id = request.GET.get("client") or None
+
     if request.method == "POST":
-        form = BillingContextForm(request.POST)
+        form = BillingContextForm(request.POST, client_id=client_id)
         if form.is_valid():
+            challans = form.cleaned_data["challans"]
+            company_name_override = form.cleaned_data.get("company_name", "").strip()
+            now = timezone.now()
+
+            # Group selected challans by client, create one Billing per group
+            from collections import defaultdict
+            groups = defaultdict(list)
+            for c in challans:
+                groups[c.client_id].append(c)
+
+            total_count = 0
+            client_names = []
             with transaction.atomic():
-                challans = form.cleaned_data["challans"]
-                is_adjustment = any(c.adjust_requested for c in challans)
-                billing = Billing.objects.create(
-                    company_name=form.cleaned_data["company_name"],
-                    client=form.cleaned_data["client"],
-                    adjust_requested=is_adjustment,
-                )
-                billing.challans.set(challans)
-                challans.update(is_billed_out=True, billed_out_at=timezone.now())
+                for cid, group in groups.items():
+                    client_obj = group[0].client
+                    is_adjustment = any(c.adjust_requested for c in group)
+                    billing = Billing.objects.create(
+                        company_name=company_name_override,
+                        client=client_obj,
+                        adjust_requested=is_adjustment,
+                    )
+                    pks = [c.pk for c in group]
+                    billing.challans.set(pks)
+                    Challan.objects.filter(pk__in=pks).update(
+                        is_billed_out=True, billed_out_at=now
+                    )
+                    total_count += len(group)
+                    client_names.append(client_obj.name)
+
             messages.success(
                 request,
-                f"{challans.count()} challan(s) billed out for "
-                f"{form.cleaned_data['client']}.",
+                f"{total_count} challan(s) billed out"
+                + (f" for: {', '.join(client_names)}." if client_names else "."),
             )
             return redirect("challan:dashboard")
     else:
-        initial = {}
-        client_id = request.GET.get("client")
-        if client_id:
-            initial["client"] = client_id
-        form = BillingContextForm(initial=initial)
-    return render(request, "challan/billing_context.html", {"form": form})
+        form = BillingContextForm(client_id=client_id)
+
+    # Pass all clients for the optional filter dropdown
+    from .models import Client as ClientModel
+    clients = ClientModel.objects.all()
+    return render(request, "challan/billing_context.html", {
+        "form": form,
+        "clients": clients,
+        "selected_client_id": int(client_id) if client_id else None,
+    })
 
 
 # ---------------------------------------------------------------------
@@ -455,4 +480,36 @@ def employee_stock_overview(request, employee_name):
         request,
         "challan/employee_stock_overview.html",
         {"employee_name": employee_name, "allocations": allocations},
+    )
+
+
+@login_required
+def billing_history_list(request):
+    """List all billing out transactions."""
+    billings = Billing.objects.all().select_related("client").prefetch_related("challans")
+    return render(request, "challan/billing_history_list.html", {"billings": billings})
+
+
+@login_required
+def billing_detail(request, pk):
+    """View details of a specific billing transaction, consolidating goods across all linked challans."""
+    billing = get_object_or_404(Billing, pk=pk)
+    
+    # Consolidate items
+    consolidated = {}
+    for challan in billing.challans.all():
+        for item in challan.items.all():
+            name = item.product_name
+            consolidated[name] = consolidated.get(name, 0) + item.quantity
+            
+    # Sort items alphabetically for clean UI presentation
+    sorted_items = sorted(consolidated.items())
+
+    return render(
+        request,
+        "challan/billing_detail.html",
+        {
+            "billing": billing,
+            "consolidated_items": sorted_items,
+        }
     )

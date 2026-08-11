@@ -1,0 +1,69 @@
+{% extends "challan/base.html" %}
+{% block title %}Billing History — Challan System{% endblock %}
+{% block page_title %}Billing History{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Overview of all billed transactions</span>
+    <h2>Billing History</h2>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Billing ID</th>
+          <th>Specific Company Name</th>
+          <th>Client Name</th>
+          <th>Linked Challans</th>
+          <th>Billed Date</th>
+          <th>Adjust?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for billing in billings %}
+        <tr>
+          <td>
+            <a href="{% url 'challan:billing_detail' billing.pk %}" class="job-num" style="text-decoration: underline; font-weight: bold;">
+              #{{ billing.pk }}
+            </a>
+          </td>
+          <td>{{ billing.company_name }}</td>
+          <td>{{ billing.client.name }}</td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              {% for challan in billing.challans.all %}
+                <a href="{% url 'challan:challan_detail' challan.pk %}" class="stamp neutral" style="font-size:0.72rem; text-decoration:none;">
+                  {{ challan.challan_no }}
+                </a>
+              {% endfor %}
+            </div>
+          </td>
+          <td>{{ billing.created_at|date:"d M Y, H:i" }}</td>
+          <td>
+            {% if billing.adjust_requested %}
+              <span class="stamp warn" style="font-size:0.72rem;">Yes</span>
+            {% else %}
+              <span class="stamp neutral" style="font-size:0.72rem;">No</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <strong>No billing history found</strong>
+              <p>You haven't billed out any challans yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

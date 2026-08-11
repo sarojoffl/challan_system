@@ -20,6 +20,8 @@ urlpatterns = [
     path("initiate/", views.initiation_form, name="initiation_form"),
     path("hand-challan/", views.hand_challan_form, name="hand_challan_form"),
     path("billing/", views.billing_context, name="billing_context"),
+    path("billing/history/", views.billing_history_list, name="billing_history_list"),
+    path("billing/<int:pk>/", views.billing_detail, name="billing_detail"),
     path("stock/intake/", views.stock_intake, name="stock_intake"),
     path("stock/employee/", views.employee_stock_form, name="employee_stock_form"),
     path(

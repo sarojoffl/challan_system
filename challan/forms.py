@@ -153,45 +153,36 @@ class ChallanNoChangeForm(forms.Form):
 # Billing Context
 # ---------------------------------------------------------------------
 class BillingContextForm(forms.Form):
-    company_name = forms.CharField(label="Specific Company Name")
-    client = forms.ModelChoiceField(
-        queryset=Client.objects.all(), label="Client's Name"
+    company_name = forms.CharField(
+        label="Specific Company Name",
+        required=True,
     )
     challans = forms.ModelMultipleChoiceField(
         queryset=Challan.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        label="Pending Challans",
+        label="Challans to Bill Out",
+        error_messages={"required": "Please select at least one challan to bill out."},
     )
 
     def __init__(self, *args, **kwargs):
+        client_id = kwargs.pop("client_id", None)
         super().__init__(*args, **kwargs)
-        client_id = None
-        if self.data.get("client"):
-            client_id = self.data.get("client")
-        elif self.initial.get("client"):
-            client_id = self.initial.get("client")
-        qs = Challan.objects.filter(status=Challan.Status.APPROVED, is_billed_out=False)
+        qs = (
+            Challan.objects.filter(status=Challan.Status.APPROVED, is_billed_out=False)
+            .select_related("client")
+            .order_by("client__name", "-created_at")
+        )
         if client_id:
             qs = qs.filter(client_id=client_id)
         self.fields["challans"].queryset = qs
 
-    def clean(self):
-        cleaned = super().clean()
-        client = cleaned.get("client")
-        challans = cleaned.get("challans")
-        if client and challans:
-            mismatched = [c for c in challans if c.client_id != client.id]
-            if mismatched:
-                raise forms.ValidationError(
-                    "The billing out client's name doesn't match the client's "
-                    "name on the selected challan(s) — invalid."
-                )
+    def clean_challans(self):
+        challans = self.cleaned_data.get("challans")
+        if challans:
             already_billed = [c for c in challans if c.is_billed_out]
             if already_billed:
-                raise forms.ValidationError(
-                    "This challan has already been billed out."
-                )
-        return cleaned
+                raise forms.ValidationError("One or more selected challans have already been billed out.")
+        return challans
 
 
 # ---------------------------------------------------------------------
