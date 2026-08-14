@@ -1,0 +1,100 @@
+{% extends "challan/base.html" %}
+{% block title %}Stock & Employee Overview — Challan System{% endblock %}
+{% block page_title %}Executive Stock & Employee Overview{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Inventory Management</span>
+    <h2>Stock &amp; Employee Overview</h2>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h3>Warehouse Stock Inventory</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if stock_items %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Brand</th>
+            <th>Model</th>
+            <th>S.N.</th>
+            <th>Type</th>
+            <th>Available Qty</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in stock_items %}
+          <tr>
+            <td><strong>{{ item.name }}</strong></td>
+            <td>{{ item.brand|default:"—" }}</td>
+            <td>{{ item.model|default:"—" }}</td>
+            <td>{{ item.serial_number|default:"—" }}</td>
+            <td>{% if item.is_disposable %}Disposable{% else %}Non-disposable{% endif %}</td>
+            <td><span style="font-weight: 700; font-size: 1.05rem; color: var(--color-primary);">{{ item.quantity_available }}</span></td>
+            <td>
+              {% if item.quantity_available > 10 %}
+              <span class="stamp approved">In Stock</span>
+              {% elif item.quantity_available > 0 %}
+              <span class="stamp pending">Low Stock</span>
+              {% else %}
+              <span class="stamp void">Out of Stock</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No stock items found.</strong>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Employee Issued Stock Allocations</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if employees_data %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Employee / Individual</th>
+            <th>Total Issued Challans</th>
+            <th>Total Units Issued</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in employees_data %}
+          <tr>
+            <td><strong>{{ emp.name }}</strong></td>
+            <td>{{ emp.total_challans }} challans</td>
+            <td>{{ emp.total_items }} units</td>
+            <td style="text-align: right;">
+              <a class="btn btn-outline btn-sm" href="{% url 'challan:employee_stock_overview' emp.name %}">View Detailed Stock</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No employee stock records yet.</strong>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

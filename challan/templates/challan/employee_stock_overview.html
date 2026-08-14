@@ -8,7 +8,11 @@
     <span class="eyebrow">Individual</span>
     <h2>{{ employee_name }}</h2>
   </div>
-  <a class="btn btn-outline" href="{% url 'challan:employee_stock_form' %}">← Back to Employee Stock</a>
+  {% if user.is_staff or user.is_superuser %}
+    <a class="btn btn-outline" href="{% url 'challan:employee_stock_summary' %}">← Back to Employee Stock</a>
+  {% else %}
+    <a class="btn btn-outline" href="{% url 'challan:employee_stock_form' %}">← Back to Employee Stock</a>
+  {% endif %}
 </div>
 
 {% for allocation in allocations %}

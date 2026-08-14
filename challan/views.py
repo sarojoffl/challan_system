@@ -17,7 +17,7 @@ from .forms import (
     StockItemForm,
     VoidChallanForm,
 )
-from .models import Billing, Challan, EmployeeStockChallan, StockItem, VOID_WINDOW_DAYS
+from .models import Billing, Challan, EmployeeStockChallan, StockItem, VOID_WINDOW_DAYS, Company
 
 
 # ---------------------------------------------------------------------
@@ -64,9 +64,14 @@ def challan_detail(request, pk):
 def challan_approve(request, pk):
     challan = get_object_or_404(Challan, pk=pk)
     if request.method == "POST":
+        if challan.adjust_requested and not challan.admin_approved:
+            messages.error(
+                request,
+                "This challan has a requested Material Adjustment. "
+                "An Admin must approve the adjustment from the Approvals & Unlocks desk first."
+            )
+            return redirect("challan:challan_detail", pk=pk)
         challan.status = Challan.Status.APPROVED
-        if challan.adjust_requested:
-            challan.admin_approved = True
         challan.save()
         messages.success(request, f"Challan {challan.challan_no} approved.")
     return redirect("challan:challan_detail", pk=pk)
@@ -207,6 +212,8 @@ def challan_edit(request, pk):
                         from .models import Client
                         client, _ = Client.objects.get_or_create(name=client_name)
                         instance.client = client
+                    if instance.adjust_requested and "adjust_requested" in form.changed_data:
+                        instance.admin_approved = False
                     instance.save()
                     formset.save()
                 messages.success(request, f"Challan {challan.challan_no} updated successfully.")
@@ -484,6 +491,37 @@ def employee_stock_overview(request, employee_name):
 
 
 @login_required
+def employee_stock_summary(request):
+    """Admin executive overview of warehouse stock items and employee allocations."""
+    stock_items = StockItem.objects.all().order_by("name")
+    
+    employees_data = []
+    employee_names = (
+        EmployeeStockChallan.objects.values_list("employee_name", flat=True)
+        .distinct()
+        .order_by("employee_name")
+    )
+    for name in employee_names:
+        ch_list = EmployeeStockChallan.objects.filter(employee_name=name).prefetch_related("items")
+        total_challans = ch_list.count()
+        total_items_count = sum(sum(item.quantity for item in ch.items.all()) for ch in ch_list)
+        employees_data.append({
+            "name": name,
+            "total_challans": total_challans,
+            "total_items": total_items_count,
+        })
+
+    return render(
+        request,
+        "challan/employee_stock_summary.html",
+        {
+            "stock_items": stock_items,
+            "employees_data": employees_data,
+        },
+    )
+
+
+@login_required
 def billing_history_list(request):
     """List all billing out transactions."""
     billings = Billing.objects.all().select_related("client").prefetch_related("challans")
@@ -512,4 +550,81 @@ def billing_detail(request, pk):
             "billing": billing,
             "consolidated_items": sorted_items,
         }
+    )
+
+
+from django.http import JsonResponse
+import re
+
+@login_required
+def next_challan_number(request):
+    company_id = request.GET.get("company_id")
+    if not company_id:
+        return JsonResponse({"next_number": "", "prefix": "", "seq_number": ""})
+    company = get_object_or_404(Company, pk=company_id)
+    prefix = f"{company.code.upper()}-"
+    # Find all challans with this prefix
+    challans = Challan.objects.filter(challan_no__startswith=prefix)
+    max_num = 0
+    for c in challans:
+        match = re.match(r"^.+-(\d+)$", c.challan_no)
+        if match:
+            try:
+                num = int(match.group(1))
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                pass
+    seq = max_num + 1
+    return JsonResponse({
+        "next_number": f"{prefix}{seq}",
+        "prefix": prefix,
+        "seq_number": str(seq),
+    })
+
+
+@login_required
+def admin_panel(request):
+    """Central Admin Control Panel for reviewing material replacement approvals
+    and unlocking locked challans."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "Access restricted to administrators.")
+        return redirect("challan:dashboard")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        challan_id = request.POST.get("challan_id")
+        challan = get_object_or_404(Challan, pk=challan_id)
+
+        if action == "approve_adjustment":
+            challan.admin_approved = True
+            challan.save()
+            messages.success(request, f"Material adjustment for Challan {challan.challan_no} approved.")
+        elif action == "unlock_challan":
+            challan.locked = False
+            challan.unlocked_by_admin = True
+            challan.save()
+            messages.success(request, f"Challan {challan.challan_no} unlocked by admin.")
+
+        return redirect("challan:admin_panel")
+
+    pending_adjustments = (
+        Challan.objects.filter(adjust_requested=True, admin_approved=False)
+        .select_related("client", "billed_company")
+        .prefetch_related("items")
+    )
+
+    locked_challans = (
+        Challan.objects.filter(locked=True)
+        .select_related("client", "billed_company")
+        .prefetch_related("items")
+    )
+
+    return render(
+        request,
+        "challan/admin_panel.html",
+        {
+            "pending_adjustments": pending_adjustments,
+            "locked_challans": locked_challans,
+        },
     )

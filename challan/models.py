@@ -10,6 +10,20 @@ VOID_WINDOW_DAYS = 3       # initial active window (days)
 OVERDUE_LOCK_DAYS = 7      # if not extended by day 7, challan locks
 
 
+class Company(models.Model):
+    """The internal or billed business divisions (e.g. Office, Store, Maintenance)"""
+    name = models.CharField(max_length=255, unique=True)
+    code = models.CharField(max_length=10, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "Companies"
+
+    def __str__(self):
+        return self.name
+
+
+
 class Client(models.Model):
     """A billing client. Kept as its own model so the same client can be
     picked from a dropdown across the Initiation Form, Billing Context and
@@ -44,9 +58,15 @@ class Challan(models.Model):
     challan_type = models.CharField(max_length=20, choices=ChallanType.choices)
     challan_no = models.CharField(max_length=50, unique=True, blank=True)
 
-    billed_company = models.CharField(
-        "Billed Company (or Firm)", max_length=255, blank=True
+    billed_company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name="challans",
+        null=True,
+        blank=True,
+        verbose_name="Billed Company (or Firm)"
     )
+
     client = models.ForeignKey(
         Client, on_delete=models.PROTECT, related_name="challans"
     )
@@ -239,7 +259,15 @@ class Billing(models.Model):
     """Billing Context: selecting a company + client, picking pending
     challans belonging to that client, and marking them billed out."""
 
-    company_name = models.CharField(max_length=255)
+    company_name = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name="billings",
+        null=True,
+        blank=True,
+        verbose_name="Specific Company Name"
+    )
+
     client = models.ForeignKey(
         Client, on_delete=models.PROTECT, related_name="billings"
     )

@@ -1,0 +1,139 @@
+{% extends "challan/base.html" %}
+{% block title %}Admin Panel — Challan System{% endblock %}
+{% block page_title %}Admin Control & Approval Panel{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Executive Management</span>
+    <h2>Admin Approval &amp; Unlock Panel</h2>
+  </div>
+</div>
+
+<div class="stat-strip" style="margin-bottom: 24px; grid-template-columns: 1fr 1fr;">
+  <div class="stat-card">
+    <div class="stat-label">Pending Adjustments</div>
+    <div class="stat-val" style="color: var(--color-amber-text, #d97706);">{{ pending_adjustments|length }}</div>
+    <div class="stat-sub">Material replacement requests awaiting approval</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Locked Challans</div>
+    <div class="stat-val" style="color: var(--color-danger);">{{ locked_challans|length }}</div>
+    <div class="stat-sub">Overdue challans past 7-day window</div>
+  </div>
+</div>
+
+<!-- Section 1: Pending Material Replacement / Adjustment Approvals -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <h3>Material Replacement / Adjustment Approvals</h3>
+    <span class="badge badge-warn">{{ pending_adjustments|length }} Pending</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if pending_adjustments %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Challan No.</th>
+            <th>Client</th>
+            <th>Billed Company</th>
+            <th>Delivered By</th>
+            <th>Items</th>
+            <th>Date</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in pending_adjustments %}
+          <tr>
+            <td>
+              <a class="job-num" href="{% url 'challan:challan_detail' c.pk %}"><strong>{{ c.challan_no }}</strong></a>
+            </td>
+            <td>{{ c.client.name }}</td>
+            <td>{{ c.billed_company|default:"—" }}</td>
+            <td>{{ c.delivered_by|default:"—" }}</td>
+            <td>
+              <ul style="margin: 0; padding-left: 16px; font-size: 0.82rem;">
+                {% for item in c.items.all %}
+                <li>{{ item.quantity }}x {{ item.product_name }}</li>
+                {% empty %}
+                <li style="list-style: none; font-style: italic; color: var(--color-ink-faint);">No items</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>{{ c.created_at|date:"d M Y, H:i" }}</td>
+            <td style="text-align: right;">
+              <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="challan_id" value="{{ c.pk }}">
+                <input type="hidden" name="action" value="approve_adjustment">
+                <button type="submit" class="btn btn-primary btn-sm">Approve Adjustment</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No pending adjustment requests.</strong>
+      <p style="margin-top:4px; font-size: 0.85rem;">All material replacement requests have been reviewed.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Section 2: Locked Challans (Overdue / Past 7 Days) -->
+<div class="card">
+  <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <h3>Locked &amp; Overdue Challans (Admin Unlock)</h3>
+    <span class="badge badge-danger">{{ locked_challans|length }} Locked</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if locked_challans %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Challan No.</th>
+            <th>Client</th>
+            <th>Type</th>
+            <th>Created</th>
+            <th>Extension Reason</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in locked_challans %}
+          <tr>
+            <td>
+              <a class="job-num" href="{% url 'challan:challan_detail' c.pk %}"><strong>{{ c.challan_no }}</strong></a>
+            </td>
+            <td>{{ c.client.name }}</td>
+            <td><span class="badge">{{ c.get_challan_type_display }}</span></td>
+            <td>{{ c.created_at|date:"d M Y" }}</td>
+            <td><span style="font-size: 0.82rem; color: var(--color-ink-muted);">{{ c.extend_reason|default:"No extension requested" }}</span></td>
+            <td style="text-align: right;">
+              <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="challan_id" value="{{ c.pk }}">
+                <input type="hidden" name="action" value="unlock_challan">
+                <button type="submit" class="btn btn-warning btn-sm">Unlock Challan</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No locked challans.</strong>
+      <p style="margin-top:4px; font-size: 0.85rem;">There are currently no locked or overdue challans needing admin intervention.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

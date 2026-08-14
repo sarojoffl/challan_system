@@ -9,6 +9,7 @@ from .models import (
     EmployeeStockChallanItem,
     StockIntake,
     StockItem,
+    Company,
 )
 
 
@@ -70,3 +71,9 @@ class EmployeeStockChallanItemInline(admin.TabularInline):
 class EmployeeStockChallanAdmin(admin.ModelAdmin):
     list_display = ("employee_name", "challan", "delivered_by", "created_at")
     inlines = [EmployeeStockChallanItemInline]
+
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ("name", "code")
+    search_fields = ("name", "code")

@@ -9,29 +9,24 @@
     <h2>{{ challan.challan_no }}</h2>
   </div>
   <div class="btn-row">
-    {% if challan.status == 'pending' %}
-      <form method="post" action="{% url 'challan:challan_approve' challan.pk %}" style="display:inline;">
-        {% csrf_token %}
-        <button class="btn btn-success" type="submit">Approve</button>
-      </form>
-      {% if challan.can_void %}
-        <a class="btn btn-danger" href="{% url 'challan:challan_void' challan.pk %}">Void</a>
-        <a class="btn btn-outline" href="{% url 'challan:challan_edit' challan.pk %}">Edit</a>
-      {% else %}
-        <button class="btn btn-danger" disabled title="Locked — challan window expired">Void (locked)</button>
-        <button class="btn btn-outline" disabled title="Locked — challan window expired">Edit (locked)</button>
-        {% if user.is_staff %}
-        <form method="post" action="{% url 'challan:challan_unlock' challan.pk %}" style="display:inline;">
+    {% if not user.is_staff and not user.is_superuser %}
+      {% if challan.status == 'pending' %}
+        <form method="post" action="{% url 'challan:challan_approve' challan.pk %}" style="display:inline;">
           {% csrf_token %}
-          <button class="btn btn-outline" type="submit">Admin Unlock</button>
+          <button class="btn btn-success" type="submit">Approve</button>
         </form>
+        {% if challan.can_void %}
+          <a class="btn btn-danger" href="{% url 'challan:challan_void' challan.pk %}">Void</a>
+          <a class="btn btn-outline" href="{% url 'challan:challan_edit' challan.pk %}">Edit</a>
+        {% else %}
+          <button class="btn btn-danger" disabled title="Locked — challan window expired">Void (locked)</button>
+          <button class="btn btn-outline" disabled title="Locked — challan window expired">Edit (locked)</button>
         {% endif %}
+        {% if challan.can_extend %}
+          <a class="btn btn-warning" href="{% url 'challan:challan_extend' challan.pk %}">Extend (+3 Days)</a>
+        {% endif %}
+        <a class="btn btn-outline" href="{% url 'challan:challan_no_change' challan.pk %}">Change Challan No.</a>
       {% endif %}
-      {# Extend: only available between day 3 and day 7, one-time only #}
-      {% if challan.can_extend %}
-        <a class="btn btn-warning" href="{% url 'challan:challan_extend' challan.pk %}">Extend (+3 Days)</a>
-      {% endif %}
-      <a class="btn btn-outline" href="{% url 'challan:challan_no_change' challan.pk %}">Change Challan No.</a>
     {% endif %}
   </div>
 </div>
@@ -41,7 +36,7 @@
   {% if challan.is_locked_out %}
   <div class="notice error">
     <strong>🔒 Challan Locked</strong> — This challan has exceeded its allowed window and is now locked.
-    {% if user.is_staff %}An admin can unlock it above.{% else %}Contact an admin to unlock.{% endif %}
+    {% if user.is_staff or user.is_superuser %}An admin can review and unlock it in the <a href="{% url 'challan:admin_panel' %}" style="font-weight:700; text-decoration:underline;">Approvals &amp; Unlocks Desk</a>.{% else %}Contact an admin to unlock.{% endif %}
   </div>
   {% elif challan.can_extend %}
   <div class="notice warn">
@@ -69,9 +64,9 @@
       </div>
       <div class="ticket-field"><span class="tf-label">Billed Company</span><span class="tf-value {% if not challan.billed_company %}empty{% endif %}">{{ challan.billed_company|default:"Not set" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Client's Name</span><span class="tf-value">{{ challan.client.name }}</span></div>
-      <div class="ticket-field"><span class="tf-label">Name</span><span class="tf-value {% if not challan.contact_name %}empty{% endif %}">{{ challan.contact_name|default:"—" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Contact Person</span><span class="tf-value {% if not challan.contact_name %}empty{% endif %}">{{ challan.contact_name|default:"—" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Quotation Based</span><span class="tf-value">{% if challan.is_quotation_based %}Yes{% else %}No{% endif %}</span></div>
-      <div class="ticket-field"><span class="tf-label">Adjust Requested</span><span class="tf-value">{% if challan.adjust_requested %}Yes — admin approval required{% else %}No{% endif %}</span></div>
+      <div class="ticket-field"><span class="tf-label">Adjust Requested</span><span class="tf-value">{% if challan.adjust_requested %}{% if challan.admin_approved %}<span class="stamp approved">Approved by Admin</span>{% else %}<span class="stamp pending">Pending Admin Approval</span>{% endif %}{% else %}No{% endif %}</span></div>
       <div class="ticket-field"><span class="tf-label">Delivered By</span><span class="tf-value {% if not challan.delivered_by %}empty{% endif %}">{{ challan.delivered_by|default:"—" }}</span></div>
       {% if challan.adjust_requested %}
       <div class="ticket-field"><span class="tf-label">Personal Details — Name</span><span class="tf-value {% if not challan.personal_details_name %}empty{% endif %}">{{ challan.personal_details_name|default:"—" }} {% if challan.personal_details_phone %}({{ challan.personal_details_phone }}){% endif %}</span></div>

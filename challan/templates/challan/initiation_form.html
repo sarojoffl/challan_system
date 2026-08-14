@@ -22,7 +22,11 @@
         </div>
         <div class="form-group">
           <label>Challan No. <span class="req">*</span></label>
-          {{ form.challan_no }}
+          <input type="hidden" name="challan_no" id="id_challan_no" value="{{ form.challan_no.value|default:'' }}">
+          <div class="input-group">
+            <span class="input-prefix" id="challan-prefix"></span>
+            <input type="text" id="challan-seq-input" placeholder="Number" autocomplete="off">
+          </div>
           {{ form.challan_no.errors }}
         </div>
         <div class="form-group">
@@ -31,15 +35,13 @@
           {{ form.client_name.errors }}
         </div>
         <div class="form-group">
-          <label>Name</label>
+          <label>Contact Person</label>
           {{ form.contact_name }}
         </div>
         <div class="form-group">
-          <label>Quotation Based</label>
-          <select name="{{ form.is_quotation_based.html_name }}" id="{{ form.is_quotation_based.id_for_label }}">
-            <option value="True">Yes</option>
-            <option value="False">No</option>
-          </select>
+          <label>Quotation Based <span class="req">*</span></label>
+          {{ form.is_quotation_based }}
+          {{ form.is_quotation_based.errors }}
         </div>
         <div class="form-group">
           <label>Delivered By <span class="req">*</span></label>
@@ -69,9 +71,14 @@
             {{ form.personal_details_phone.errors }}
           </div>
         </div>
-        <div class="form-group checkbox-row" style="align-self:start;">
-          {{ form.adjust_requested }}
-          <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust (admin approval will be required if checked)</label>
+        <div class="adjust-box">
+          <label class="adjust-label" for="{{ form.adjust_requested.id_for_label }}">
+            {{ form.adjust_requested }}
+            <div class="adjust-text">
+              <span class="adjust-title">Adjust / Material Replacement</span>
+              <span class="adjust-desc">Admin approval will be required if checked</span>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -81,16 +88,30 @@
           {{ formset.management_form }}
           <div id="item-rows">
             {% for item_form in formset %}
-              <div class="formset-row item-row">
-                <div class="form-group"><label>S.N.</label>{{ item_form.serial_number }}</div>
-                <div class="form-group"><label>Item</label>{{ item_form.product_name }}</div>
-                <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
-                <div class="delete-cell">{{ item_form.DELETE }}</div>
+              <div class="formset-row item-row" style="align-items: flex-start;">
+                <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+                  <span class="sn-label sn-badge">#{{ forloop.counter }}</span>
+                  <div style="display:none;">{{ item_form.serial_number }}</div>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label>Item</label>
+                  {{ item_form.product_name }}
+                </div>
+                <div class="form-group" style="flex: 0 0 120px;">
+                  <label>Qty</label>
+                  {{ item_form.quantity }}
+                </div>
+                <div class="delete-cell" style="padding-top: 24px;">
+                  <div style="display:none;">{{ item_form.DELETE }}</div>
+                  <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                  </button>
+                </div>
                 {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
               </div>
             {% endfor %}
           </div>
-          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
+          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn" style="margin-top: 12px;">+ Add item</button>
         </div>
       </div>
 
@@ -103,11 +124,25 @@
 </div>
 
 <template id="empty-item-template">
-  <div class="formset-row item-row">
-    <div class="form-group"><label>S.N.</label><input type="number" name="items-__prefix__-serial_number" id="id_items-__prefix__-serial_number"></div>
-    <div class="form-group"><label>Item</label><input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name"></div>
-    <div class="form-group"><label>Qty</label><input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity"></div>
-    <div class="delete-cell"><input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE"></div>
+  <div class="formset-row item-row" style="align-items: flex-start;">
+    <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+      <span class="sn-label sn-badge">#__sn__</span>
+      <div style="display:none;"><input type="hidden" name="items-__prefix__-serial_number" id="id_items-__prefix__-serial_number" value="__sn__"></div>
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>Item</label>
+      <input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name">
+    </div>
+    <div class="form-group" style="flex: 0 0 120px;">
+      <label>Qty</label>
+      <input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity">
+    </div>
+    <div class="delete-cell" style="padding-top: 24px;">
+      <div style="display:none;"><input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE"></div>
+      <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -134,12 +169,123 @@
   updateLayout();
 })();
 
+// Challan No: prefix label + number input (number is entered manually)
+const prefixEl = document.getElementById('challan-prefix');
+const seqInput = document.getElementById('challan-seq-input');
+const hiddenChallanNo = document.getElementById('id_challan_no');
+
+function syncChallanNo() {
+  const prefix = prefixEl.textContent || '';
+  const seq = seqInput.value.trim();
+  hiddenChallanNo.value = (prefix && seq) ? prefix + seq : seq;
+}
+
+// On page load, parse existing challan_no value into prefix + number
+(function initChallanNoSplit() {
+  const existing = hiddenChallanNo.value;
+  if (existing) {
+    const dashIdx = existing.lastIndexOf('-');
+    if (dashIdx > 0) {
+      prefixEl.textContent = existing.substring(0, dashIdx + 1);
+      seqInput.value = existing.substring(dashIdx + 1);
+    } else {
+      seqInput.value = existing;
+    }
+  }
+})();
+
+seqInput.addEventListener('input', syncChallanNo);
+
+// Update prefix when Billed Company is changed (number stays empty for manual entry)
+document.getElementById('id_billed_company').addEventListener('change', function() {
+  const companyId = this.value;
+  if (!companyId) {
+    prefixEl.textContent = '';
+    seqInput.value = '';
+    hiddenChallanNo.value = '';
+    return;
+  }
+  fetch(`/api/next-challan-number/?company_id=${companyId}`)
+    .then(res => res.json())
+    .then(data => {
+      prefixEl.textContent = data.prefix || '';
+      seqInput.value = '';
+      hiddenChallanNo.value = '';
+    });
+});
+
+// Dynamic S.N. Recalculation
+function recalculateSerialNumbers() {
+  let index = 1;
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    // Check if the DELETE checkbox is checked
+    const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+    const isDeleted = deleteCheckbox && deleteCheckbox.checked;
+    
+    if (row.style.display !== 'none' && !isDeleted) {
+      row.querySelector('.sn-label').textContent = '#' + index;
+      const snInput = row.querySelector('input[name$="-serial_number"]');
+      if (snInput) {
+        snInput.value = index;
+      }
+      index++;
+    }
+  });
+}
+
+// Add Item Row
 document.getElementById('add-item-btn').addEventListener('click', function () {
   const totalForms = document.getElementById('id_items-TOTAL_FORMS');
   const index = parseInt(totalForms.value, 10);
-  const template = document.getElementById('empty-item-template').innerHTML.replace(/__prefix__/g, index);
+  
+  // Calculate next S.N.
+  let currentActiveRows = 0;
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+    const isDeleted = deleteCheckbox && deleteCheckbox.checked;
+    if (row.style.display !== 'none' && !isDeleted) {
+      currentActiveRows++;
+    }
+  });
+  const nextSn = currentActiveRows + 1;
+
+  const template = document.getElementById('empty-item-template').innerHTML
+    .replace(/__prefix__/g, index)
+    .replace(/__sn__/g, nextSn);
+    
   document.getElementById('item-rows').insertAdjacentHTML('beforeend', template);
   totalForms.value = index + 1;
+  
+  // Bind remove button to the new row
+  bindRemoveRowEvents();
 });
+
+// Remove Item Row
+function bindRemoveRowEvents() {
+  document.querySelectorAll('.btn-remove-row').forEach(btn => {
+    // Remove existing event listeners to avoid duplicates
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    newBtn.addEventListener('click', function() {
+      const row = this.closest('.item-row');
+      const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+      
+      if (deleteCheckbox) {
+        // If it's an existing database row, mark it for deletion and hide it
+        deleteCheckbox.checked = true;
+        row.style.display = 'none';
+      } else {
+        // If it's a newly added row, remove it from DOM
+        row.remove();
+      }
+      recalculateSerialNumbers();
+    });
+  });
+}
+
+// Init row events and serial numbers
+bindRemoveRowEvents();
+recalculateSerialNumbers();
 </script>
 {% endblock %}

@@ -10,6 +10,7 @@ from .models import (
     EmployeeStockChallanItem,
     StockIntake,
     StockItem,
+    Company,
 )
 
 
@@ -35,6 +36,11 @@ class ChallanInitiationForm(BaseStyledForm):
         label="Client's Name",
         help_text="New clients are created automatically.",
     )
+    is_quotation_based = forms.ChoiceField(
+        label="Quotation Based",
+        choices=[("", "— Select Option —"), ("True", "Yes"), ("False", "No")],
+        required=True,
+    )
 
     class Meta:
         model = Challan
@@ -54,12 +60,19 @@ class ChallanInitiationForm(BaseStyledForm):
             "billed_company": "Billed Company (or Firm)",
             "challan_no": "Challan No.",
             "contact_name": "Name",
-            "is_quotation_based": "Quotation Based",
             "received_by_name": "Received By — Name",
             "received_by_phone": "Phone No.",
             "personal_details_name": "Personal Details — Name",
             "personal_details_phone": "Phone No.",
         }
+
+    def clean_is_quotation_based(self):
+        val = self.cleaned_data.get("is_quotation_based")
+        if val == "True":
+            return True
+        elif val == "False":
+            return False
+        return None
 
     def clean(self):
         cleaned = super().clean()
@@ -80,9 +93,18 @@ class ChallanInitiationForm(BaseStyledForm):
         return instance
 
 
+class BaseChallanItemFormSet(forms.models.BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        if "serial_number" in form.fields:
+            form.fields["serial_number"].widget = forms.HiddenInput()
+            form.fields["serial_number"].required = False
+
+
 ChallanItemFormSet = inlineformset_factory(
     Challan,
     ChallanItem,
+    formset=BaseChallanItemFormSet,
     fields=["serial_number", "product_name", "quantity"],
     extra=1,
     can_delete=True,
@@ -153,7 +175,8 @@ class ChallanNoChangeForm(forms.Form):
 # Billing Context
 # ---------------------------------------------------------------------
 class BillingContextForm(forms.Form):
-    company_name = forms.CharField(
+    company_name = forms.ModelChoiceField(
+        queryset=Company.objects.all(),
         label="Specific Company Name",
         required=True,
     )

@@ -24,9 +24,8 @@ urlpatterns = [
     path("billing/<int:pk>/", views.billing_detail, name="billing_detail"),
     path("stock/intake/", views.stock_intake, name="stock_intake"),
     path("stock/employee/", views.employee_stock_form, name="employee_stock_form"),
-    path(
-        "stock/employee/<str:employee_name>/",
-        views.employee_stock_overview,
-        name="employee_stock_overview",
-    ),
+    path("stock/summary/", views.employee_stock_summary, name="employee_stock_summary"),
+    path("stock/employee/<str:employee_name>/", views.employee_stock_overview, name="employee_stock_overview"),
+    path("api/next-challan-number/", views.next_challan_number, name="next_challan_number"),
+    path("admin-panel/", views.admin_panel, name="admin_panel"),
 ]

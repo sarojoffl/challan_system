@@ -30,9 +30,14 @@
           <label>Delivered By <span class="req">*</span></label>
           {{ form.delivered_by }}
         </div>
-        <div class="form-group checkbox-row" style="align-self:start;">
-          {{ form.adjust_requested }}
-          <label for="{{ form.adjust_requested.id_for_label }}" style="margin:0;">Adjust</label>
+        <div class="adjust-box">
+          <label class="adjust-label" for="{{ form.adjust_requested.id_for_label }}">
+            {{ form.adjust_requested }}
+            <div class="adjust-text">
+              <span class="adjust-title">Adjust / Material Replacement</span>
+              <span class="adjust-desc">Admin approval will be required if checked</span>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -42,15 +47,29 @@
           {{ formset.management_form }}
           <div id="item-rows">
             {% for item_form in formset %}
-              <div class="formset-row item-row" style="grid-template-columns:1fr 100px 40px;">
-                <div class="form-group"><label>Stock Item</label>{{ item_form.stock_item }}</div>
-                <div class="form-group"><label>Qty</label>{{ item_form.quantity }}</div>
-                <div class="delete-cell">{{ item_form.DELETE }}</div>
+              <div class="formset-row item-row" style="align-items: flex-start;">
+                <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+                  <span class="sn-label sn-badge">#{{ forloop.counter }}</span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label>Stock Item</label>
+                  {{ item_form.stock_item }}
+                </div>
+                <div class="form-group" style="flex: 0 0 120px;">
+                  <label>Qty</label>
+                  {{ item_form.quantity }}
+                </div>
+                <div class="delete-cell" style="padding-top: 24px;">
+                  <div style="display:none;">{{ item_form.DELETE }}</div>
+                  <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1-.5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                  </button>
+                </div>
                 {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
               </div>
             {% endfor %}
           </div>
-          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn">+ Add item</button>
+          <button type="button" class="btn btn-outline btn-sm" id="add-item-btn" style="margin-top: 12px;">+ Add item</button>
         </div>
       </div>
 
@@ -75,21 +94,91 @@
 </div>
 {% endif %}
 
+<template id="empty-item-template">
+  <div class="formset-row item-row" style="align-items: flex-start;">
+    <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+      <span class="sn-label sn-badge">#__sn__</span>
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>Stock Item</label>
+      {{ formset.empty_form.stock_item }}
+    </div>
+    <div class="form-group" style="flex: 0 0 120px;">
+      <label>Qty</label>
+      {{ formset.empty_form.quantity }}
+    </div>
+    <div class="delete-cell" style="padding-top: 24px;">
+      <div style="display:none;">{{ formset.empty_form.DELETE }}</div>
+      <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1-.5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+      </button>
+    </div>
+  </div>
+</template>
+
 <script>
+// Add Item Row
 document.getElementById('add-item-btn').addEventListener('click', function () {
   const totalForms = document.getElementById('id_items-TOTAL_FORMS');
   const index = parseInt(totalForms.value, 10);
-  const row = document.querySelector('.item-row').cloneNode(true);
-  row.querySelectorAll('input, select').forEach(function (el) {
-    const name = el.getAttribute('name');
-    if (!name) return;
-    const newName = name.replace(/items-\d+-/, 'items-' + index + '-');
-    el.setAttribute('name', newName);
-    el.setAttribute('id', 'id_' + newName);
-    if (el.type === 'checkbox') { el.checked = false; } else { el.value = ''; }
+  
+  let currentActiveRows = 0;
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+    const isDeleted = deleteCheckbox && deleteCheckbox.checked;
+    if (row.style.display !== 'none' && !isDeleted) {
+      currentActiveRows++;
+    }
   });
-  document.getElementById('item-rows').appendChild(row);
+  const nextSn = currentActiveRows + 1;
+
+  const template = document.getElementById('empty-item-template').innerHTML
+    .replace(/__prefix__/g, index)
+    .replace(/__sn__/g, nextSn);
+
+  document.getElementById('item-rows').insertAdjacentHTML('beforeend', template);
   totalForms.value = index + 1;
+  bindRemoveRowEvents();
 });
+
+// Remove Item Row
+function bindRemoveRowEvents() {
+  document.querySelectorAll('.btn-remove-row').forEach(btn => {
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    newBtn.addEventListener('click', function() {
+      const row = this.closest('.item-row');
+      const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+      
+      if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+        row.style.display = 'none';
+      } else {
+        row.remove();
+      }
+      recalculateSerialNumbers();
+    });
+  });
+}
+
+function recalculateSerialNumbers() {
+  let index = 1;
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+    const isDeleted = deleteCheckbox && deleteCheckbox.checked;
+    
+    if (row.style.display !== 'none' && !isDeleted) {
+      const snBadge = row.querySelector('.sn-label');
+      if (snBadge) {
+        snBadge.textContent = '#' + index;
+      }
+      index++;
+    }
+  });
+}
+
+// Init
+bindRemoveRowEvents();
 </script>
 {% endblock %}

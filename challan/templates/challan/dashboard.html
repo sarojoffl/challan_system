@@ -9,8 +9,13 @@
     <h2>Challan Dashboard</h2>
   </div>
   <div class="btn-row">
-    <a href="{% url 'challan:initiation_form' %}" class="btn btn-primary">+ New Challan</a>
-    <a href="{% url 'challan:hand_challan_form' %}" class="btn btn-outline">+ Hand Challan</a>
+    {% if user.is_staff or user.is_superuser %}
+      <a href="{% url 'challan:admin_panel' %}" class="btn btn-primary">Approvals &amp; Unlocks Desk</a>
+      <a href="{% url 'challan:billing_history_list' %}" class="btn btn-outline">Billing History</a>
+    {% else %}
+      <a href="{% url 'challan:initiation_form' %}" class="btn btn-primary">+ New Challan</a>
+      <a href="{% url 'challan:hand_challan_form' %}" class="btn btn-outline">+ Hand Challan</a>
+    {% endif %}
   </div>
 </div>
 
@@ -33,13 +38,53 @@
   </a>
 </div>
 
-{% if overdue_challans %}
-<div class="notice warn">
-  <strong>{{ overdue_challans|length }} pending challan(s)</strong> are past the {{ void_window_days }}-day window —
-  the client should be prompted to extend, change the challan no., or void.
-  {% for c in overdue_challans %}
-    <a href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a>{% if not forloop.last %}, {% endif %}
-  {% endfor %}
+{% if overdue_challans and not user.is_staff and not user.is_superuser %}
+<div class="card" style="margin-bottom: 24px; border: 1px solid rgba(217, 119, 6, 0.3); background: rgba(254, 243, 199, 0.25);">
+  <div class="card-header" style="background: rgba(254, 243, 199, 0.55); display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1.1rem;">⚠️</span>
+      <h3 style="color: #92400e; margin: 0; font-size: 0.95rem; font-weight: 700;">Action Required: {{ overdue_challans|length }} Overdue Pending Challan(s)</h3>
+    </div>
+    <span style="font-size: 0.78rem; color: #92400e; font-weight: 600;">Past {{ void_window_days }}-Day Window</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Challan No.</th>
+            <th>Client</th>
+            <th>Contact Person</th>
+            <th>Company</th>
+            <th style="text-align: right;">Action Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in overdue_challans %}
+          <tr>
+            <td>
+              <a href="{% url 'challan:challan_detail' c.pk %}" style="font-weight: 700; color: var(--color-primary);">
+                {{ c.challan_no }}
+              </a>
+            </td>
+            <td><strong>{{ c.client.name }}</strong></td>
+            <td>{{ c.contact_name|default:"—" }}</td>
+            <td>{{ c.billed_company.code|default:"—" }}</td>
+            <td style="text-align: right;">
+              <div class="btn-row" style="justify-content: flex-end; margin: 0;">
+                {% if c.can_extend %}
+                  <a href="{% url 'challan:challan_extend' c.pk %}" class="btn btn-warning btn-sm">Extend (+3 Days)</a>
+                {% endif %}
+                <a href="{% url 'challan:challan_no_change' c.pk %}" class="btn btn-outline btn-sm">Change No.</a>
+                <a href="{% url 'challan:challan_detail' c.pk %}" class="btn btn-primary btn-sm">View Details</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endif %}
 
