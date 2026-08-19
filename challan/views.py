@@ -26,9 +26,42 @@ from .models import Billing, Challan, EmployeeStockChallan, StockItem, VOID_WIND
 @login_required
 def challan_dashboard(request):
     status_filter = request.GET.get("status", "all")
-    challans = Challan.objects.select_related("client").all()
+    company_filter = request.GET.get("company", "")
+    client_filter = request.GET.get("client", "")
+    type_filter = request.GET.get("type", "")
+    query = request.GET.get("q", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    challans = Challan.objects.select_related("client", "billed_company").all()
+
     if status_filter in dict(Challan.Status.choices):
         challans = challans.filter(status=status_filter)
+
+    if company_filter:
+        challans = challans.filter(billed_company_id=company_filter)
+
+    if client_filter:
+        challans = challans.filter(client_id=client_filter)
+
+    if type_filter in dict(Challan.ChallanType.choices):
+        challans = challans.filter(challan_type=type_filter)
+
+    if date_from:
+        challans = challans.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        challans = challans.filter(created_at__date__lte=date_to)
+
+    if query:
+        from django.db.models import Q
+        challans = challans.filter(
+            Q(challan_no__icontains=query)
+            | Q(client__name__icontains=query)
+            | Q(contact_name__icontains=query)
+            | Q(delivered_by__icontains=query)
+            | Q(received_by_name__icontains=query)
+        )
 
     counts = {
         "all": Challan.objects.count(),
@@ -39,15 +72,24 @@ def challan_dashboard(request):
 
     overdue_challans = Challan.objects.filter(
         status=Challan.Status.PENDING
-    ).select_related("client")
+    ).select_related("client", "billed_company")
     overdue_challans = [c for c in overdue_challans if c.is_overdue_for_reminder]
 
+    from .models import Client, Company
     context = {
         "challans": challans,
         "status_filter": status_filter,
+        "company_filter": company_filter,
+        "client_filter": client_filter,
+        "type_filter": type_filter,
+        "query": query,
+        "date_from": date_from,
+        "date_to": date_to,
         "counts": counts,
         "overdue_challans": overdue_challans,
         "void_window_days": VOID_WINDOW_DAYS,
+        "companies": Company.objects.all(),
+        "clients": Client.objects.all(),
     }
     return render(request, "challan/dashboard.html", context)
 
@@ -320,7 +362,7 @@ def billing_context(request):
         form = BillingContextForm(request.POST, client_id=client_id)
         if form.is_valid():
             challans = form.cleaned_data["challans"]
-            company_name_override = form.cleaned_data.get("company_name", "").strip()
+            company_name_override = form.cleaned_data.get("company_name")
             now = timezone.now()
 
             # Group selected challans by client, create one Billing per group
@@ -449,6 +491,8 @@ def employee_stock_form(request):
                     created_by=request.user,
                 )
                 stock_challan = form.save(commit=False)
+                from urllib.parse import unquote
+                stock_challan.employee_name = unquote(stock_challan.employee_name).strip()
                 stock_challan.challan = challan
                 stock_challan.save()
                 formset.instance = stock_challan
@@ -480,13 +524,20 @@ def employee_stock_overview(request, employee_name):
     """Detailed overview pop-up-equivalent page for a specific employee's
     issued stock, per: 'If clicked it should show the detailed overview
     of the specific person.'"""
+    from urllib.parse import unquote
+    clean_name = unquote(unquote(employee_name)).strip()
+    
+    # Only redirect if double-encoded (%25 or %2520) to prevent infinite redirect loop
+    if "%25" in employee_name:
+        return redirect("challan:employee_stock_overview", employee_name=clean_name)
+
     allocations = EmployeeStockChallan.objects.filter(
-        employee_name=employee_name
+        employee_name=clean_name
     ).prefetch_related("items__stock_item", "challan")
     return render(
         request,
         "challan/employee_stock_overview.html",
-        {"employee_name": employee_name, "allocations": allocations},
+        {"employee_name": clean_name, "allocations": allocations},
     )
 
 

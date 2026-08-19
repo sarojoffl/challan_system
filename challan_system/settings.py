@@ -117,7 +117,8 @@ USE_TZ = True
 
 # Static files
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+FORCE_SCRIPT_NAME = ""
 
 # Source static files used during development
 STATICFILES_DIRS = [
