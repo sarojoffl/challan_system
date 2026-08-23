@@ -133,10 +133,21 @@ def challan_void(request, pk):
     if request.method == "POST":
         form = VoidChallanForm(request.POST)
         if form.is_valid():
-            challan.status = Challan.Status.VOID
-            challan.void_reason = form.cleaned_data["void_reason"]
-            challan.save()
-            messages.success(request, f"Challan {challan.challan_no} voided.")
+            if challan.status == Challan.Status.APPROVED or challan.is_locked_out:
+                # Require Admin approval to void an approved/locked challan
+                challan.void_requested = True
+                challan.void_reason = form.cleaned_data["void_reason"]
+                challan.save()
+                messages.success(
+                    request,
+                    f"Void request submitted for Challan {challan.challan_no}. "
+                    f"An Admin must approve it from the Approvals & Unlocks desk."
+                )
+            else:
+                challan.status = Challan.Status.VOID
+                challan.void_reason = form.cleaned_data["void_reason"]
+                challan.save()
+                messages.success(request, f"Challan {challan.challan_no} voided.")
             return redirect("challan:challan_detail", pk=pk)
     else:
         form = VoidChallanForm()
@@ -574,9 +585,51 @@ def employee_stock_summary(request):
 
 @login_required
 def billing_history_list(request):
-    """List all billing out transactions."""
-    billings = Billing.objects.all().select_related("client").prefetch_related("challans")
-    return render(request, "challan/billing_history_list.html", {"billings": billings})
+    """List all billing out transactions with filter bar."""
+    company_filter = request.GET.get("company", "")
+    client_filter = request.GET.get("client", "")
+    query = request.GET.get("q", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    billings = Billing.objects.select_related("client", "company_name").prefetch_related("challans").all()
+
+    if company_filter:
+        billings = billings.filter(company_name_id=company_filter)
+
+    if client_filter:
+        billings = billings.filter(client_id=client_filter)
+
+    if date_from:
+        billings = billings.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        billings = billings.filter(created_at__date__lte=date_to)
+
+    if query:
+        from django.db.models import Q
+        billings = billings.filter(
+            Q(client__name__icontains=query)
+            | Q(company_name__name__icontains=query)
+            | Q(company_name__code__icontains=query)
+            | Q(challans__challan_no__icontains=query)
+        ).distinct()
+
+    from .models import Client, Company
+    return render(
+        request,
+        "challan/billing_history_list.html",
+        {
+            "billings": billings,
+            "company_filter": company_filter,
+            "client_filter": client_filter,
+            "query": query,
+            "date_from": date_from,
+            "date_to": date_to,
+            "companies": Company.objects.all(),
+            "clients": Client.objects.all(),
+        },
+    )
 
 
 @login_required
@@ -651,6 +704,12 @@ def admin_panel(request):
             challan.admin_approved = True
             challan.save()
             messages.success(request, f"Material adjustment for Challan {challan.challan_no} approved.")
+        elif action == "approve_void":
+            challan.status = Challan.Status.VOID
+            challan.void_requested = False
+            challan.void_approved_by_admin = True
+            challan.save()
+            messages.success(request, f"Void request for Challan {challan.challan_no} approved. Status is now Void.")
         elif action == "unlock_challan":
             challan.locked = False
             challan.unlocked_by_admin = True
@@ -661,6 +720,13 @@ def admin_panel(request):
 
     pending_adjustments = (
         Challan.objects.filter(adjust_requested=True, admin_approved=False)
+        .select_related("client", "billed_company")
+        .prefetch_related("items")
+    )
+
+    pending_voids = (
+        Challan.objects.filter(void_requested=True)
+        .exclude(status=Challan.Status.VOID)
         .select_related("client", "billed_company")
         .prefetch_related("items")
     )
@@ -676,6 +742,7 @@ def admin_panel(request):
         "challan/admin_panel.html",
         {
             "pending_adjustments": pending_adjustments,
+            "pending_voids": pending_voids,
             "locked_challans": locked_challans,
         },
     )

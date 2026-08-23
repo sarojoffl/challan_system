@@ -10,6 +10,47 @@
   </div>
 </div>
 
+<form method="get" action="{% url 'challan:billing_history_list' %}" class="card" style="margin-bottom: 20px; padding: 16px;">
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+    <div style="flex: 2; min-width: 180px;">
+      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Search</label>
+      <input type="text" name="q" value="{{ query }}" placeholder="Search client, company, challan #..." class="form-control" style="width: 100%;">
+    </div>
+    <div style="flex: 1; min-width: 140px;">
+      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Company</label>
+      <select name="company" class="form-control" style="width: 100%;">
+        <option value="">All Companies</option>
+        {% for comp in companies %}
+          <option value="{{ comp.pk }}" {% if company_filter == comp.pk|stringformat:"s" %}selected{% endif %}>{{ comp.name }} ({{ comp.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 140px;">
+      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Client</label>
+      <select name="client" class="form-control" style="width: 100%;">
+        <option value="">All Clients</option>
+        {% for cl in clients %}
+          <option value="{{ cl.pk }}" {% if client_filter == cl.pk|stringformat:"s" %}selected{% endif %}>{{ cl.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 135px;">
+      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Date From</label>
+      <input type="date" name="date_from" value="{{ date_from }}" class="form-control" style="width: 100%;">
+    </div>
+    <div style="flex: 1; min-width: 135px;">
+      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Date To</label>
+      <input type="date" name="date_to" value="{{ date_to }}" class="form-control" style="width: 100%;">
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if query or company_filter or client_filter or date_from or date_to %}
+        <a href="{% url 'challan:billing_history_list' %}" class="btn btn-outline">Reset</a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
 <div class="card">
   <div class="table-responsive">
     <table>

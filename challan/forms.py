@@ -100,6 +100,28 @@ class BaseChallanItemFormSet(forms.models.BaseInlineFormSet):
             form.fields["serial_number"].widget = forms.HiddenInput()
             form.fields["serial_number"].required = False
 
+    def clean(self):
+        super().clean()
+        idx = 1
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get("DELETE", False):
+                form.cleaned_data["serial_number"] = idx
+                if hasattr(form, "instance") and form.instance:
+                    form.instance.serial_number = idx
+                idx += 1
+
+    def save(self, commit=True):
+        instances = super().save(commit=False)
+        for idx, instance in enumerate(instances, start=1):
+            instance.serial_number = idx
+            if commit:
+                instance.save()
+        if commit:
+            for obj in self.deleted_objects:
+                obj.delete()
+            self.save_m2m()
+        return instances
+
 
 ChallanItemFormSet = inlineformset_factory(
     Challan,

@@ -15,7 +15,9 @@
           {% csrf_token %}
           <button class="btn btn-success" type="submit">Approve</button>
         </form>
-        {% if challan.can_void %}
+        {% if challan.void_requested %}
+          <button class="btn btn-danger" disabled style="opacity: 0.7; cursor: default;">Void Requested</button>
+        {% elif challan.can_void %}
           <a class="btn btn-danger" href="{% url 'challan:challan_void' challan.pk %}">Void</a>
           <a class="btn btn-outline" href="{% url 'challan:challan_edit' challan.pk %}">Edit</a>
         {% else %}
@@ -26,12 +28,31 @@
           <a class="btn btn-warning" href="{% url 'challan:challan_extend' challan.pk %}">Extend (+3 Days)</a>
         {% endif %}
         <a class="btn btn-outline" href="{% url 'challan:challan_no_change' challan.pk %}">Change Challan No.</a>
+      {% elif challan.status == 'approved' %}
+        {% if not challan.is_billed_out %}
+          {% if challan.void_requested %}
+            <button class="btn btn-danger" disabled style="opacity: 0.7; cursor: default;">Void Requested</button>
+          {% elif challan.can_void %}
+            <a class="btn btn-danger" href="{% url 'challan:challan_void' challan.pk %}">Void</a>
+          {% endif %}
+        {% endif %}
       {% endif %}
     {% endif %}
   </div>
 </div>
 
 {# --- Status banners --- #}
+{% if challan.void_requested and challan.status != 'void' %}
+<div class="notice warn" style="background:#fee2e2; border-color:#fca5a5; color:#991b1b;">
+  <strong>⏳ Void Requested (Pending Admin Approval)</strong> — A request to void this challan has been submitted with reason: <em>"{{ challan.void_reason }}"</em>.
+  {% if user.is_staff or user.is_superuser %}
+    An Admin can review and approve this in the <a href="{% url 'challan:admin_panel' %}" style="font-weight:700; text-decoration:underline; color:#991b1b;">Approvals &amp; Unlocks Desk</a>.
+  {% else %}
+    Awaiting administrator approval.
+  {% endif %}
+</div>
+{% endif %}
+
 {% if challan.status == 'pending' %}
   {% if challan.is_locked_out %}
   <div class="notice error">

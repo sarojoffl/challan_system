@@ -78,6 +78,8 @@ class Challan(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
     void_reason = models.TextField(blank=True)
+    void_requested = models.BooleanField("Void Requested", default=False)
+    void_approved_by_admin = models.BooleanField(default=False)
     challan_no_change_reason = models.TextField(
         "Challan No. change reason", blank=True
     )
@@ -186,15 +188,21 @@ class Challan(models.Model):
 
     @property
     def can_void(self):
-        """True if the challan can still be acted on (voided / edited)."""
-        if self.status != self.Status.PENDING:
+        """True if the challan can be voided or void-requested:
+        - Cannot be voided if already VOID.
+        - Cannot be voided if already BILLED OUT.
+        - Approved challans can request void (goes to Admin approval).
+        - Pending challans allowed within active window or if admin-unlocked.
+        """
+        if self.status == self.Status.VOID or self.is_billed_out:
             return False
+        if self.status == self.Status.APPROVED:
+            return True
         if self.unlocked_by_admin:
             return True
         now = timezone.now()
         if now <= self.initial_deadline:
             return True
-        # Extended window
         if self.extension_deadline and now <= self.extension_deadline:
             return True
         return False

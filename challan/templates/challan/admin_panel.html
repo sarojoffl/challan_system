@@ -10,23 +10,28 @@
   </div>
 </div>
 
-<div class="stat-strip" style="margin-bottom: 24px; grid-template-columns: 1fr 1fr;">
+<div class="stat-strip" style="margin-bottom: 24px; grid-template-columns: 1fr 1fr 1fr;">
   <div class="stat-card">
     <div class="stat-label">Pending Adjustments</div>
     <div class="stat-val" style="color: var(--color-amber-text, #d97706);">{{ pending_adjustments|length }}</div>
-    <div class="stat-sub">Material replacement requests awaiting approval</div>
+    <div class="stat-sub">Material replacement requests</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pending Void Requests</div>
+    <div class="stat-val" style="color: #dc2626;">{{ pending_voids|length }}</div>
+    <div class="stat-sub">Approved/locked void requests</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">Locked Challans</div>
     <div class="stat-val" style="color: var(--color-danger);">{{ locked_challans|length }}</div>
-    <div class="stat-sub">Overdue challans past 7-day window</div>
+    <div class="stat-sub">Overdue past 7-day window</div>
   </div>
 </div>
 
 <!-- Section 1: Pending Material Replacement / Adjustment Approvals -->
 <div class="card" style="margin-bottom: 24px;">
   <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
-    <h3>Material Replacement / Adjustment Approvals</h3>
+    <h3>Material Replacement Approvals</h3>
     <span class="badge badge-warn">{{ pending_adjustments|length }} Pending</span>
   </div>
   <div class="card-body" style="padding: 0;">
@@ -85,10 +90,62 @@
   </div>
 </div>
 
-<!-- Section 2: Locked Challans (Overdue / Past 7 Days) -->
+<!-- Section 2: Pending Void Approvals -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <h3>Pending Void Requests</h3>
+    <span class="badge badge-warn" style="background:#fee2e2; color:#991b1b;">{{ pending_voids|length }} Pending</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if pending_voids %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Challan No.</th>
+            <th>Client</th>
+            <th>Status</th>
+            <th>Void Reason</th>
+            <th>Date Requested</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in pending_voids %}
+          <tr>
+            <td>
+              <a class="job-num" href="{% url 'challan:challan_detail' c.pk %}"><strong>{{ c.challan_no }}</strong></a>
+            </td>
+            <td>{{ c.client.name }}</td>
+            <td><span class="badge">{{ c.get_status_display }}</span></td>
+            <td><span style="font-size: 0.82rem; font-weight:600; color: #991b1b;">{{ c.void_reason|default:"No reason provided" }}</span></td>
+            <td>{{ c.created_at|date:"d M Y" }}</td>
+            <td style="text-align: right;">
+              <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="challan_id" value="{{ c.pk }}">
+                <input type="hidden" name="action" value="approve_void">
+                <button type="submit" class="btn btn-danger btn-sm">Approve Void</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No pending void requests.</strong>
+      <p style="margin-top:4px; font-size: 0.85rem;">All void requests have been processed.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Section 3: Locked Challans (Overdue / Past 7 Days) -->
 <div class="card">
   <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
-    <h3>Locked &amp; Overdue Challans (Admin Unlock)</h3>
+    <h3>Locked &amp; Overdue Challans</h3>
     <span class="badge badge-danger">{{ locked_challans|length }} Locked</span>
   </div>
   <div class="card-body" style="padding: 0;">
