@@ -27,7 +27,6 @@
           <span style="background: var(--color-danger); color: #fff; border-radius: 10px; padding: 2px 7px; font-size: 0.72rem; font-weight: 800;">{{ admin_total_pending_count }}</span>
           {% endif %}
         </a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_edit' %}active{% endif %}" href="{% url 'challan:company_list' %}">Companies</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'billing_history_list' or request.resolver_match.url_name == 'billing_detail' %}active{% endif %}" href="{% url 'challan:billing_history_list' %}">Billing History</a>
       {% else %}

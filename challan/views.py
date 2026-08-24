@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import models, transaction
 from django.db.models import F, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -77,9 +78,17 @@ def challan_dashboard(request):
     ).select_related("client", "billed_company")
     overdue_challans = [c for c in overdue_challans if c.is_overdue_for_reminder]
 
+    paginator = Paginator(challans, 10)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.page(1)
+
     from .models import Client, Company
     context = {
-        "challans": challans,
+        "page_obj": page_obj,
+        "challans": page_obj.object_list,
         "status_filter": status_filter,
         "company_filter": company_filter,
         "client_filter": client_filter,
@@ -541,6 +550,11 @@ def stock_intake(request):
         elif item_form.is_valid():
             with transaction.atomic():
                 stock_item = item_form.save(commit=False)
+                is_disp = request.POST.get("item-is_disposable")
+                if is_disp:
+                    stock_item.is_disposable = (is_disp == "True")
+                else:
+                    stock_item.is_disposable = False
                 stock_item.quantity_available = 0
                 stock_item.save()
                 qty = int(request.POST.get("item-starting_quantity") or 0)
@@ -708,12 +722,20 @@ def billing_history_list(request):
             | Q(bill_no__icontains=query)
         ).distinct()
 
+    paginator = Paginator(billings, 10)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.page(1)
+
     from .models import Client, Company
     return render(
         request,
         "challan/billing_history_list.html",
         {
-            "billings": billings,
+            "page_obj": page_obj,
+            "billings": page_obj.object_list,
             "company_filter": company_filter,
             "client_filter": client_filter,
             "query": query,
@@ -846,7 +868,7 @@ def admin_panel(request):
 # ---------------------------------------------------------------------
 @login_required
 def company_list(request):
-    companies = Company.objects.all()
+    companies_qs = Company.objects.all()
     if request.method == "POST":
         form = CompanyForm(request.POST)
         if form.is_valid():
@@ -856,7 +878,22 @@ def company_list(request):
     else:
         form = CompanyForm()
 
-    return render(request, "challan/company_list.html", {"companies": companies, "form": form})
+    paginator = Paginator(companies_qs, 10)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.page(1)
+
+    return render(
+        request,
+        "challan/company_list.html",
+        {
+            "page_obj": page_obj,
+            "companies": page_obj.object_list,
+            "form": form,
+        },
+    )
 
 
 @login_required

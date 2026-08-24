@@ -14,8 +14,7 @@
   {% for emp in employees %}
   <option value="{{ emp }}">
   {% endfor %}
-</datalist>
-
+</datalist>{% if not user.is_staff and not user.is_superuser %}
 <div class="card">
   <div class="card-header"><h3>Add New Stock Item &amp; Intake</h3></div>
   <div class="card-body">
@@ -28,22 +27,16 @@
           <select id="item-emp-select" class="form-control" style="margin-bottom: 6px;" onchange="toggleNewEmpInput(this.value)">
             <option value="">— Select Existing Employee —</option>
             {% for emp in employees %}
-              <option value="{{ emp }}">{{ emp }}</option>
+            <option value="{{ emp }}">{{ emp }}</option>
             {% endfor %}
             <option value="__NEW__">+ Enter New Employee Name</option>
           </select>
-          <input type="text" name="item-employee_name" id="item-emp-text" list="employee-list" required placeholder="Enter employee name..." class="form-control" style="display:none;">
+          <input type="text" name="item-employee_name" id="item-emp-input" class="form-control" placeholder="Enter new employee name..." style="display: none;" required>
         </div>
         <div class="form-group">
           <label>Item Name <span class="req">*</span></label>
           {{ item_form.name }}
-        </div>
-        <div class="form-group">
-          <label>Disposable / Non-disposable</label>
-          <select name="item-is_disposable" class="form-control">
-            <option value="True">Disposable</option>
-            <option value="False" selected>Non-disposable</option>
-          </select>
+          {{ item_form.name.errors }}
         </div>
         <div class="form-group">
           <label>Brand</label>
@@ -54,21 +47,29 @@
           {{ item_form.model }}
         </div>
         <div class="form-group">
-          <label>S.N.</label>
+          <label>Serial Number (S.N.)</label>
           {{ item_form.serial_number }}
         </div>
         <div class="form-group">
-          <label>Starting Intake Qty <span class="req">*</span></label>
-          <input type="number" name="item-starting_quantity" min="1" value="1" class="form-control">
+          <label>Disposable / Non-disposable</label>
+          <select name="item-is_disposable" class="form-control">
+            <option value="">— Select Type —</option>
+            <option value="True">Disposable</option>
+            <option value="False">Non-disposable</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Intake Qty <span class="req">*</span></label>
+          <input type="number" name="item-starting_quantity" min="1" value="1" class="form-control" required>
         </div>
         <div class="form-group">
           <label>Intake Date</label>
-          <input type="datetime-local" name="item-created_at" class="form-control" value="{% now 'Y-m-d\TH:i' %}">
+          {{ intake_form.created_at }}
         </div>
       </div>
       {% if item_form.errors %}<div class="notice error">Please check the fields above.</div>{% endif %}
       <div class="form-actions" style="margin-top: 15px;">
-        <button type="submit" class="btn btn-primary">Add Stock &amp; Intake</button>
+        <button type="submit" class="btn btn-primary">Add Item &amp; Record Intake</button>
       </div>
     </form>
   </div>
@@ -81,14 +82,15 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="intake">
       <div class="form-grid">
-        <div class="form-group" style="grid-column: 1 / -1;">
+        <div class="form-group">
           <label>Employee Name <span class="req">*</span></label>
           <select name="intake-employee_name" class="form-control" required>
-            <option value="">— Select Employee —</option>
+            <option value="">— Select an Employee —</option>
             {% for emp in employees %}
-              <option value="{{ emp }}">{{ emp }}</option>
+            <option value="{{ emp }}">{{ emp }}</option>
             {% endfor %}
           </select>
+          {{ intake_form.employee_name.errors }}
         </div>
         <div class="form-group">
           <label>Stock Item <span class="req">*</span></label>
@@ -110,6 +112,7 @@
     </form>
   </div>
 </div>
+{% endif %}
 
 <div style="margin-top: 32px;">
   <div style="margin-bottom: 16px;">
@@ -138,7 +141,9 @@
             <th>Available Qty</th>
             <th>Intake Date</th>
             <th>Last Updated</th>
+            {% if not user.is_staff and not user.is_superuser %}
             <th style="text-align: right;">Action</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -155,6 +160,7 @@
             </td>
             <td>{{ intake.created_at|date:"d M Y, H:i" }}</td>
             <td>{{ intake.updated_at|date:"d M Y, H:i" }}</td>
+            {% if not user.is_staff and not user.is_superuser %}
             <td style="text-align: right;">
               {% if intake.quantity > 0 %}
               <button type="button" class="btn btn-danger btn-sm" onclick="showDecreaseModal('{{ intake.pk }}', '{{ intake.employee_name|escapejs }}', '{{ intake.stock_item.name|escapejs }}', {{ intake.quantity }})">
@@ -164,6 +170,7 @@
               <span class="text-muted" style="font-size:0.8rem;">Out of stock</span>
               {% endif %}
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
