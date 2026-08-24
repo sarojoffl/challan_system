@@ -1,0 +1,29 @@
+{% extends "challan/base.html" %}
+{% block title %}Delete Company — {{ company.name }}{% endblock %}
+{% block page_title %}Delete Company{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Confirm deletion</span>
+    <h2>Delete Company</h2>
+  </div>
+</div>
+
+<div class="card" style="max-width: 500px; border-left: 3px solid var(--color-danger);">
+  <div class="card-header">
+    <h3>Are you sure?</h3>
+  </div>
+  <div class="card-body">
+    <p>Are you sure you want to delete company <strong>{{ company.name }} ({{ company.code }})</strong>?</p>
+    <p style="font-size: 0.85rem; color: var(--color-ink-muted); margin-top: 8px;">This action cannot be undone.</p>
+    
+    <form method="post" style="margin-top: 20px; display: flex; gap: 10px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Yes, Delete Company</button>
+      <a href="{% url 'challan:company_list' %}" class="btn btn-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

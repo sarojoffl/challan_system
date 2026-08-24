@@ -57,6 +57,7 @@
       <thead>
         <tr>
           <th>Billing ID</th>
+          <th>Bill No.</th>
           <th>Specific Company Name</th>
           <th>Client Name</th>
           <th>Linked Challans</th>
@@ -71,6 +72,9 @@
             <a href="{% url 'challan:billing_detail' billing.pk %}" class="job-num" style="text-decoration: underline; font-weight: bold;">
               #{{ billing.pk }}
             </a>
+          </td>
+          <td>
+            <strong style="color: var(--color-primary);">{{ billing.bill_no|default:"—" }}</strong>
           </td>
           <td>{{ billing.company_name }}</td>
           <td>{{ billing.client.name }}</td>
@@ -94,7 +98,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6">
+          <td colspan="7">
             <div class="empty-state">
               <strong>No billing history found</strong>
               <p>You haven't billed out any challans yet.</p>

@@ -10,8 +10,8 @@
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-<div class="app">
-  {% if user.is_authenticated %}
+<div class="app" {% if request.GET.popup %}style="display:block;"{% endif %}>
+  {% if user.is_authenticated and not request.GET.popup %}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <span class="brand-name">Challan System</span>
@@ -27,17 +27,18 @@
           <span style="background: var(--color-danger); color: #fff; border-radius: 10px; padding: 2px 7px; font-size: 0.72rem; font-weight: 800;">{{ admin_total_pending_count }}</span>
           {% endif %}
         </a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_edit' %}active{% endif %}" href="{% url 'challan:company_list' %}">Companies</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'billing_history_list' or request.resolver_match.url_name == 'billing_detail' %}active{% endif %}" href="{% url 'challan:billing_history_list' %}">Billing History</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'employee_stock_summary' or request.resolver_match.url_name == 'employee_stock_overview' %}active{% endif %}" href="{% url 'challan:employee_stock_summary' %}">Stock &amp; Employee Overview</a>
       {% else %}
         <!-- REGULAR USER NAVIGATION -->
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'challan:dashboard' %}">Dashboard</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'initiation_form' %}active{% endif %}" href="{% url 'challan:initiation_form' %}">Initiation Form</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'hand_challan_form' %}active{% endif %}" href="{% url 'challan:hand_challan_form' %}">Hand Challan</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_edit' %}active{% endif %}" href="{% url 'challan:company_list' %}">Companies</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'billing_context' %}active{% endif %}" href="{% url 'challan:billing_context' %}">Billing Context</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'billing_history_list' or request.resolver_match.url_name == 'billing_detail' %}active{% endif %}" href="{% url 'challan:billing_history_list' %}">Billing History</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'employee_stock_form' %}active{% endif %}" href="{% url 'challan:employee_stock_form' %}">Employee Stock</a>
       {% endif %}
     </nav>
     <div class="sidebar-foot">
@@ -50,8 +51,8 @@
   </aside>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   {% endif %}
-  <div class="main">
-    {% if user.is_authenticated %}
+  <div class="main" {% if request.GET.popup %}style="margin-left:0; width:100%; min-height:100vh; padding: 24px;"{% endif %}>
+    {% if user.is_authenticated and not request.GET.popup %}
     <div class="topbar">
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
         <span></span><span></span><span></span>

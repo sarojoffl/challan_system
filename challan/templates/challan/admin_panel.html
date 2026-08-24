@@ -45,6 +45,7 @@
             <th>Billed Company</th>
             <th>Delivered By</th>
             <th>Items</th>
+            <th>Adjustment Details</th>
             <th>Date</th>
             <th style="text-align: right;">Action</th>
           </tr>
@@ -67,6 +68,7 @@
                 {% endfor %}
               </ul>
             </td>
+            <td style="font-size: 0.85rem; max-width: 220px;">{{ c.adjust_reason|default:"—" }}</td>
             <td>{{ c.created_at|date:"d M Y, H:i" }}</td>
             <td style="text-align: right;">
               <form method="post" style="display: inline;">

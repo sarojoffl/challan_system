@@ -93,7 +93,7 @@
   <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
     <div style="flex: 2; min-width: 180px;">
       <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Search</label>
-      <input type="text" name="q" value="{{ query }}" placeholder="Search challan #, client, contact..." class="form-control" style="width: 100%;">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search challan #, client, item name..." class="form-control" style="width: 100%;">
     </div>
     <div style="flex: 1; min-width: 140px;">
       <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Company</label>
@@ -154,6 +154,7 @@
           <th>Challan No.</th>
           <th>Type</th>
           <th>Client</th>
+          <th>Items</th>
           <th>Quotation Based</th>
           <th>Status</th>
           <th>Adjust</th>
@@ -167,6 +168,15 @@
           <td><a class="job-num" href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a></td>
           <td>{{ c.get_challan_type_display }}</td>
           <td>{{ c.client.name }}</td>
+          <td>
+            {% for item in c.items.all %}
+              <span style="display: inline-block; background: rgba(240, 244, 248, 0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; margin: 1px 2px 1px 0;">
+                {{ item.product_name }} <strong>(x{{ item.quantity }})</strong>
+              </span>
+            {% empty %}
+              <span class="text-muted" style="font-size: 0.8rem;">—</span>
+            {% endfor %}
+          </td>
           <td>{% if c.is_quotation_based %}Yes{% else %}No{% endif %}</td>
           <td>
             {% if c.status == 'pending' %}<span class="stamp pending">Pending</span>

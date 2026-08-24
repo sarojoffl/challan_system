@@ -10,14 +10,14 @@ from .forms import (
     ChallanInitiationForm,
     ChallanItemFormSet,
     ChallanNoChangeForm,
-    EmployeeStockChallanForm,
-    EmployeeStockChallanItemFormSet,
+    CompanyForm,
     HandChallanForm,
+    StockDecreaseForm,
     StockIntakeForm,
     StockItemForm,
     VoidChallanForm,
 )
-from .models import Billing, Challan, EmployeeStockChallan, StockItem, VOID_WINDOW_DAYS, Company
+from .models import Billing, Challan, StockIntake, StockItem, VOID_WINDOW_DAYS, Company
 
 
 # ---------------------------------------------------------------------
@@ -33,7 +33,7 @@ def challan_dashboard(request):
     date_from = request.GET.get("date_from", "").strip()
     date_to = request.GET.get("date_to", "").strip()
 
-    challans = Challan.objects.select_related("client", "billed_company").all()
+    challans = Challan.objects.select_related("client", "billed_company").prefetch_related("items").all()
 
     if status_filter in dict(Challan.Status.choices):
         challans = challans.filter(status=status_filter)
@@ -61,7 +61,8 @@ def challan_dashboard(request):
             | Q(contact_name__icontains=query)
             | Q(delivered_by__icontains=query)
             | Q(received_by_name__icontains=query)
-        )
+            | Q(items__product_name__icontains=query)
+        ).distinct()
 
     counts = {
         "all": Challan.objects.count(),
@@ -97,8 +98,27 @@ def challan_dashboard(request):
 @login_required
 def challan_detail(request, pk):
     challan = get_object_or_404(
-        Challan.objects.select_related("client", "employee_stock_challan"), pk=pk
+        Challan.objects.select_related("client", "billed_company"), pk=pk
     )
+    if request.method == "POST" and (request.user.is_staff or request.user.is_superuser):
+        action = request.POST.get("action")
+        if action == "approve_adjustment":
+            challan.admin_approved = True
+            challan.save()
+            messages.success(request, f"Material adjustment for Challan {challan.challan_no} approved.")
+        elif action == "approve_void":
+            challan.status = Challan.Status.VOID
+            challan.void_requested = False
+            challan.void_approved_by_admin = True
+            challan.save()
+            messages.success(request, f"Void request for Challan {challan.challan_no} approved. Status is now Void.")
+        elif action == "unlock_challan":
+            challan.locked = False
+            challan.unlocked_by_admin = True
+            challan.save()
+            messages.success(request, f"Challan {challan.challan_no} unlocked by admin.")
+        return redirect("challan:challan_detail", pk=pk)
+
     return render(request, "challan/challan_detail.html", {"challan": challan})
 
 
@@ -286,6 +306,49 @@ def challan_edit(request, pk):
 # ---------------------------------------------------------------------
 # Initiation Form
 # ---------------------------------------------------------------------
+def process_stock_intake_deduction(challan, items):
+    """Automatically deducts stock from employee StockIntake entries and StockItem quantity_available when a challan is issued from stock intake."""
+    if not challan.is_from_stock_intake or not challan.stock_employee_name:
+        return
+    emp_name = challan.stock_employee_name.strip()
+    from django.db.models import F
+    for item in items:
+        qty = item.quantity
+        if not qty or qty <= 0:
+            continue
+        if item.stock_intake_id:
+            intake = item.stock_intake
+            deduct_qty = min(qty, intake.quantity)
+            if deduct_qty > 0:
+                StockIntake.objects.filter(pk=intake.pk).update(
+                    quantity=F("quantity") - deduct_qty
+                )
+                StockItem.objects.filter(pk=intake.stock_item_id).update(
+                    quantity_available=F("quantity_available") - deduct_qty
+                )
+        else:
+            intakes = StockIntake.objects.filter(
+                employee_name__iexact=emp_name,
+                stock_item__name__icontains=item.product_name,
+                quantity__gt=0,
+            ).order_by("created_at")
+            rem_qty = qty
+            for intake in intakes:
+                if rem_qty <= 0:
+                    break
+                deduct = min(rem_qty, intake.quantity)
+                StockIntake.objects.filter(pk=intake.pk).update(
+                    quantity=F("quantity") - deduct
+                )
+                StockItem.objects.filter(pk=intake.stock_item_id).update(
+                    quantity_available=F("quantity_available") - deduct
+                )
+                rem_qty -= deduct
+
+
+# ---------------------------------------------------------------------
+# Initiation Form
+# ---------------------------------------------------------------------
 @login_required
 def initiation_form(request):
     if request.method == "POST":
@@ -304,8 +367,13 @@ def initiation_form(request):
                     challan = form.save(commit=False)
                     challan.created_by = request.user
                     challan.save()
-                    formset.instance = challan
-                    formset.save()
+                    saved_items = formset.save(commit=False)
+                    for item in saved_items:
+                        item.challan = challan
+                        item.save()
+                    formset.save_m2m()
+                    if challan.is_from_stock_intake:
+                        process_stock_intake_deduction(challan, challan.items.all())
                 messages.success(
                     request, f"Challan {challan.challan_no} submitted for approval."
                 )
@@ -313,10 +381,17 @@ def initiation_form(request):
     else:
         form = ChallanInitiationForm()
         formset = ChallanItemFormSet(prefix="items")
+
+    stock_employees = (
+        StockIntake.objects.filter(quantity__gt=0)
+        .values_list("employee_name", flat=True)
+        .distinct()
+        .order_by("employee_name")
+    )
     return render(
         request,
         "challan/initiation_form.html",
-        {"form": form, "formset": formset},
+        {"form": form, "formset": formset, "stock_employees": stock_employees},
     )
 
 
@@ -340,25 +415,34 @@ def hand_challan_form(request):
                 with transaction.atomic():
                     challan = form.save(commit=False)
                     challan.created_by = request.user
-                    # Hand challans are considered approved on submit — they
-                    # aren't quotation-based and skip the approval gate.
                     challan.status = Challan.Status.APPROVED
                     challan.save()
-                    formset.instance = challan
-                    formset.save()
+                    saved_items = formset.save(commit=False)
+                    for item in saved_items:
+                        item.challan = challan
+                        item.save()
+                    formset.save_m2m()
+                    if challan.is_from_stock_intake:
+                        process_stock_intake_deduction(challan, challan.items.all())
                 messages.success(
                     request,
-                    f"Hand challan {challan.challan_no} created and merged "
-                    f"into the Challan Dashboard.",
+                    f"Hand challan {challan.challan_no} created and merged into the Challan Dashboard.",
                 )
                 return redirect("challan:challan_detail", pk=challan.pk)
     else:
         form = HandChallanForm()
         formset = ChallanItemFormSet(prefix="items")
+
+    stock_employees = (
+        StockIntake.objects.filter(quantity__gt=0)
+        .values_list("employee_name", flat=True)
+        .distinct()
+        .order_by("employee_name")
+    )
     return render(
         request,
         "challan/hand_challan_form.html",
-        {"form": form, "formset": formset},
+        {"form": form, "formset": formset, "stock_employees": stock_employees},
     )
 
 
@@ -368,13 +452,21 @@ def hand_challan_form(request):
 @login_required
 def billing_context(request):
     client_id = request.GET.get("client") or None
+    start_date = request.GET.get("start_date") or None
+    end_date = request.GET.get("end_date") or None
 
     if request.method == "POST":
-        form = BillingContextForm(request.POST, client_id=client_id)
+        form = BillingContextForm(
+            request.POST,
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
         if form.is_valid():
             challans = form.cleaned_data["challans"]
             company_name_override = form.cleaned_data.get("company_name")
-            now = timezone.now()
+            bill_no = form.cleaned_data.get("bill_no")
+            billing_date = form.cleaned_data.get("created_at") or timezone.now()
 
             # Group selected challans by client, create one Billing per group
             from collections import defaultdict
@@ -388,15 +480,20 @@ def billing_context(request):
                 for cid, group in groups.items():
                     client_obj = group[0].client
                     is_adjustment = any(c.adjust_requested for c in group)
-                    billing = Billing.objects.create(
-                        company_name=company_name_override,
-                        client=client_obj,
-                        adjust_requested=is_adjustment,
-                    )
+                    billing_kwargs = {
+                        "company_name": company_name_override,
+                        "bill_no": bill_no,
+                        "client": client_obj,
+                        "adjust_requested": is_adjustment,
+                    }
+                    if billing_date:
+                        billing_kwargs["created_at"] = billing_date
+
+                    billing = Billing.objects.create(**billing_kwargs)
                     pks = [c.pk for c in group]
                     billing.challans.set(pks)
                     Challan.objects.filter(pk__in=pks).update(
-                        is_billed_out=True, billed_out_at=now
+                        is_billed_out=True, billed_out_at=billing_date
                     )
                     total_count += len(group)
                     client_names.append(client_obj.name)
@@ -408,7 +505,11 @@ def billing_context(request):
             )
             return redirect("challan:dashboard")
     else:
-        form = BillingContextForm(client_id=client_id)
+        form = BillingContextForm(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # Pass all clients for the optional filter dropdown
     from .models import Client as ClientModel
@@ -417,6 +518,8 @@ def billing_context(request):
         "form": form,
         "clients": clients,
         "selected_client_id": int(client_id) if client_id else None,
+        "start_date": start_date or "",
+        "end_date": end_date or "",
     })
 
 
@@ -425,162 +528,150 @@ def billing_context(request):
 # ---------------------------------------------------------------------
 @login_required
 def stock_intake(request):
-    """Two independent actions on one page: (1) register a brand-new
-    disposable/non-disposable stock item with its starting quantity, or
-    (2) top up an existing item's quantity via a fresh intake record."""
+    """Register stock items, top up intake per employee, and view current stock."""
     item_form = StockItemForm(prefix="item")
     intake_form = StockIntakeForm(prefix="intake")
 
     if request.method == "POST" and request.POST.get("action") == "new_item":
         item_form = StockItemForm(request.POST, prefix="item")
-        if item_form.is_valid():
+        emp_name = request.POST.get("item-employee_name", "").strip()
+        if not emp_name:
+            messages.error(request, "Employee Name is compulsory for stock intake.")
+        elif item_form.is_valid():
             with transaction.atomic():
                 stock_item = item_form.save(commit=False)
                 stock_item.quantity_available = 0
                 stock_item.save()
                 qty = int(request.POST.get("item-starting_quantity") or 0)
-                for_client_id = request.POST.get("item-for_client") or None
-                if qty:
-                    from .models import StockIntake as StockIntakeModel
+                custom_date = request.POST.get("item-created_at")
 
-                    StockIntakeModel.objects.create(
+                if qty:
+                    existing = StockIntake.objects.filter(
+                        employee_name__iexact=emp_name,
                         stock_item=stock_item,
-                        for_client_id=for_client_id,
-                        quantity=qty,
-                        created_by=request.user,
-                    )
-            messages.success(request, f"New stock item added: {stock_item}.")
+                    ).first()
+                    if existing:
+                        existing.quantity += qty
+                        existing.save()
+                        StockItem.objects.filter(pk=stock_item.pk).update(
+                            quantity_available=models.F("quantity_available") + qty
+                        )
+                    else:
+                        intake_kwargs = {
+                            "employee_name": emp_name,
+                            "stock_item": stock_item,
+                            "quantity": qty,
+                            "created_by": request.user,
+                        }
+                        if custom_date:
+                            intake_kwargs["created_at"] = custom_date
+                        StockIntake.objects.create(**intake_kwargs)
+
+            messages.success(request, f"New stock item added for {emp_name}: {stock_item}.")
             return redirect("challan:stock_intake")
 
     elif request.method == "POST" and request.POST.get("action") == "intake":
         intake_form = StockIntakeForm(request.POST, prefix="intake")
         if intake_form.is_valid():
-            intake = intake_form.save(commit=False)
-            intake.created_by = request.user
-            intake.save()
+            emp_name = intake_form.cleaned_data["employee_name"].strip()
+            stock_item = intake_form.cleaned_data["stock_item"]
+            qty = intake_form.cleaned_data["quantity"]
+            custom_date = intake_form.cleaned_data.get("created_at")
+
+            with transaction.atomic():
+                existing = StockIntake.objects.filter(
+                    employee_name__iexact=emp_name,
+                    stock_item=stock_item,
+                ).first()
+
+                if existing:
+                    existing.quantity += qty
+                    existing.save()
+                    StockItem.objects.filter(pk=stock_item.pk).update(
+                        quantity_available=models.F("quantity_available") + qty
+                    )
+                else:
+                    intake = intake_form.save(commit=False)
+                    intake.employee_name = emp_name
+                    intake.created_by = request.user
+                    intake.save()
+
             messages.success(
                 request,
-                f"Stock intake recorded: +{intake.quantity} {intake.stock_item}.",
+                f"Stock top-up recorded for {emp_name}: +{qty} {stock_item}.",
             )
             return redirect("challan:stock_intake")
 
-    from .models import Client
-
+    stock_intakes = StockIntake.objects.select_related("stock_item").order_by("employee_name", "-created_at")
+    employees = (
+        StockIntake.objects.values_list("employee_name", flat=True)
+        .distinct()
+        .order_by("employee_name")
+    )
     stock_items = StockItem.objects.all()
+
     return render(
         request,
         "challan/stock_intake.html",
         {
             "item_form": item_form,
             "intake_form": intake_form,
+            "stock_intakes": stock_intakes,
             "stock_items": stock_items,
-            "clients": Client.objects.all(),
+            "employees": employees,
         },
     )
 
 
-# ---------------------------------------------------------------------
-# Stock / Hand Challan for employees
-# ---------------------------------------------------------------------
 @login_required
-def employee_stock_form(request):
+def stock_intake_decrease(request, pk):
+    """Manually decrease stock quantity on a StockIntake record."""
+    intake = get_object_or_404(StockIntake, pk=pk)
     if request.method == "POST":
-        form = EmployeeStockChallanForm(request.POST)
-        formset = EmployeeStockChallanItemFormSet(request.POST, prefix="items")
-        client_name = request.POST.get("client_name", "").strip() or "Internal / Employee Stock"
-        if form.is_valid() and formset.is_valid():
-            from .models import Client
-
-            with transaction.atomic():
-                client, _ = Client.objects.get_or_create(name=client_name)
-                challan = Challan.objects.create(
-                    challan_type=Challan.ChallanType.HAND,
-                    client=client,
-                    delivered_by=form.cleaned_data["delivered_by"],
-                    adjust_requested=form.cleaned_data["adjust_requested"],
-                    status=Challan.Status.APPROVED,
-                    created_by=request.user,
+        form = StockDecreaseForm(request.POST)
+        if form.is_valid():
+            deduct_qty = form.cleaned_data["decrease_quantity"]
+            if deduct_qty > intake.quantity:
+                messages.error(
+                    request,
+                    f"Cannot decrease by {deduct_qty}. Maximum available for {intake.employee_name} is {intake.quantity}."
                 )
-                stock_challan = form.save(commit=False)
-                from urllib.parse import unquote
-                stock_challan.employee_name = unquote(stock_challan.employee_name).strip()
-                stock_challan.challan = challan
-                stock_challan.save()
-                formset.instance = stock_challan
-                formset.save()
-            messages.success(
-                request,
-                f"Stock issued to {stock_challan.employee_name}, merged into "
-                f"the Challan Dashboard as {challan.challan_no}.",
-            )
-            return redirect("challan:challan_detail", pk=challan.pk)
-    else:
-        form = EmployeeStockChallanForm()
-        formset = EmployeeStockChallanItemFormSet(prefix="items")
-
-    employees = (
-        EmployeeStockChallan.objects.values_list("employee_name", flat=True)
-        .distinct()
-        .order_by("employee_name")
-    )
-    return render(
-        request,
-        "challan/employee_stock_form.html",
-        {"form": form, "formset": formset, "employees": employees},
-    )
+            else:
+                from django.db.models import F
+                with transaction.atomic():
+                    StockIntake.objects.filter(pk=intake.pk).update(quantity=F("quantity") - deduct_qty)
+                    StockItem.objects.filter(pk=intake.stock_item_id).update(quantity_available=F("quantity_available") - deduct_qty)
+                messages.success(
+                    request,
+                    f"Decreased {deduct_qty} units of {intake.stock_item} from {intake.employee_name}'s intake."
+                )
+            return redirect("challan:stock_intake")
+    return redirect("challan:stock_intake")
 
 
 @login_required
-def employee_stock_overview(request, employee_name):
-    """Detailed overview pop-up-equivalent page for a specific employee's
-    issued stock, per: 'If clicked it should show the detailed overview
-    of the specific person.'"""
-    from urllib.parse import unquote
-    clean_name = unquote(unquote(employee_name)).strip()
-    
-    # Only redirect if double-encoded (%25 or %2520) to prevent infinite redirect loop
-    if "%25" in employee_name:
-        return redirect("challan:employee_stock_overview", employee_name=clean_name)
+def api_employee_stock_intakes(request):
+    """JSON API endpoint returning active stock intakes for a given employee name."""
+    from django.http import JsonResponse
+    emp_name = request.GET.get("employee_name", "").strip()
+    if not emp_name:
+        return JsonResponse({"intakes": []})
+    intakes = StockIntake.objects.filter(
+        employee_name__iexact=emp_name,
+        quantity__gt=0,
+    ).select_related("stock_item")
 
-    allocations = EmployeeStockChallan.objects.filter(
-        employee_name=clean_name
-    ).prefetch_related("items__stock_item", "challan")
-    return render(
-        request,
-        "challan/employee_stock_overview.html",
-        {"employee_name": clean_name, "allocations": allocations},
-    )
-
-
-@login_required
-def employee_stock_summary(request):
-    """Admin executive overview of warehouse stock items and employee allocations."""
-    stock_items = StockItem.objects.all().order_by("name")
-    
-    employees_data = []
-    employee_names = (
-        EmployeeStockChallan.objects.values_list("employee_name", flat=True)
-        .distinct()
-        .order_by("employee_name")
-    )
-    for name in employee_names:
-        ch_list = EmployeeStockChallan.objects.filter(employee_name=name).prefetch_related("items")
-        total_challans = ch_list.count()
-        total_items_count = sum(sum(item.quantity for item in ch.items.all()) for ch in ch_list)
-        employees_data.append({
-            "name": name,
-            "total_challans": total_challans,
-            "total_items": total_items_count,
-        })
-
-    return render(
-        request,
-        "challan/employee_stock_summary.html",
+    data = [
         {
-            "stock_items": stock_items,
-            "employees_data": employees_data,
-        },
-    )
+            "id": i.pk,
+            "product_name": i.stock_item.name,
+            "brand": i.stock_item.brand,
+            "model": i.stock_item.model,
+            "available_qty": i.quantity,
+        }
+        for i in intakes
+    ]
+    return JsonResponse({"intakes": data})
 
 
 @login_required
@@ -613,6 +704,7 @@ def billing_history_list(request):
             | Q(company_name__name__icontains=query)
             | Q(company_name__code__icontains=query)
             | Q(challans__challan_no__icontains=query)
+            | Q(bill_no__icontains=query)
         ).distinct()
 
     from .models import Client, Company
@@ -746,3 +838,50 @@ def admin_panel(request):
             "locked_challans": locked_challans,
         },
     )
+
+
+# ---------------------------------------------------------------------
+# Company Management Views
+# ---------------------------------------------------------------------
+@login_required
+def company_list(request):
+    companies = Company.objects.all()
+    if request.method == "POST":
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company created successfully.")
+            return redirect("challan:company_list")
+    else:
+        form = CompanyForm()
+
+    return render(request, "challan/company_list.html", {"companies": companies, "form": form})
+
+
+@login_required
+def company_edit(request, pk):
+    company = get_object_or_404(Company, pk=pk)
+    if request.method == "POST":
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company details updated successfully.")
+            return redirect("challan:company_list")
+    else:
+        form = CompanyForm(instance=company)
+
+    return render(request, "challan/company_edit.html", {"company": company, "form": form})
+
+
+@login_required
+def company_delete(request, pk):
+    company = get_object_or_404(Company, pk=pk)
+    if request.method == "POST":
+        if company.challans.exists() or company.billings.exists():
+            messages.error(request, f"Cannot delete '{company.name}' because it is linked to existing challans or billing records.")
+        else:
+            company.delete()
+            messages.success(request, "Company deleted successfully.")
+        return redirect("challan:company_list")
+
+    return render(request, "challan/company_confirm_delete.html", {"company": company})

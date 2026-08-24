@@ -14,13 +14,16 @@ class Company(models.Model):
     """The internal or billed business divisions (e.g. Office, Store, Maintenance)"""
     name = models.CharField(max_length=255, unique=True)
     code = models.CharField(max_length=10, unique=True)
+    address = models.CharField("Address", max_length=255, blank=True)
+    phone = models.CharField("Phone Number", max_length=50, blank=True)
+    pan_vat_no = models.CharField("PAN / VAT No.", max_length=50, blank=True)
 
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Companies"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.code})"
 
 
 
@@ -86,8 +89,13 @@ class Challan(models.Model):
 
     # Adjustment / replacement material workflow
     adjust_requested = models.BooleanField("Adjust", default=False)
+    adjust_reason = models.TextField("Adjustment / Replacement Details", blank=True)
     admin_approval_required = models.BooleanField(default=False)
     admin_approved = models.BooleanField(default=False)
+
+    # Stock Intake linkage
+    is_from_stock_intake = models.BooleanField("Issue from Stock Intake", default=False)
+    stock_employee_name = models.CharField("Employee Name (Stock Intake)", max_length=255, blank=True)
 
     # Delivery / receipt info
     delivered_by = models.CharField(max_length=255, blank=True)
@@ -116,7 +124,7 @@ class Challan(models.Model):
         blank=True,
         related_name="challans_created",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField("Created Date", default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -255,6 +263,13 @@ class ChallanItem(models.Model):
     serial_number = models.PositiveIntegerField("S.N.")
     product_name = models.CharField("Item / Goods detail", max_length=255)
     quantity = models.PositiveIntegerField("Qty")
+    stock_intake = models.ForeignKey(
+        "StockIntake",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="issued_challan_items",
+    )
 
     class Meta:
         ordering = ["serial_number"]
@@ -275,13 +290,14 @@ class Billing(models.Model):
         blank=True,
         verbose_name="Specific Company Name"
     )
+    bill_no = models.CharField("Bill No.", max_length=100, blank=True, null=True)
 
     client = models.ForeignKey(
         Client, on_delete=models.PROTECT, related_name="billings"
     )
     challans = models.ManyToManyField(Challan, related_name="billing_entries")
     adjust_requested = models.BooleanField("Adjust", default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField("Billing Date", default=timezone.now)
 
     class Meta:
         ordering = ["-created_at"]
@@ -312,18 +328,12 @@ class StockItem(models.Model):
 
 
 class StockIntake(models.Model):
-    """A stock-in event ("Stock: Intake"). Increases the linked
-    StockItem's quantity_available on save."""
+    """A stock-in event assigned to an employee ("Stock: Intake").
+    Increases the linked StockItem's quantity_available on save."""
 
+    employee_name = models.CharField("Employee Name", max_length=255)
     stock_item = models.ForeignKey(
         StockItem, on_delete=models.PROTECT, related_name="intakes"
-    )
-    for_client = models.ForeignKey(
-        Client,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="stock_intakes",
     )
     quantity = models.PositiveIntegerField()
     created_by = models.ForeignKey(
@@ -332,7 +342,8 @@ class StockIntake(models.Model):
         null=True,
         blank=True,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField("Intake Date", default=timezone.now)
+    updated_at = models.DateTimeField("Last Updated", auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -346,42 +357,4 @@ class StockIntake(models.Model):
             )
 
     def __str__(self):
-        return f"Intake: {self.stock_item} +{self.quantity}"
-
-
-class EmployeeStockChallan(models.Model):
-    """Hand Challan issuing stock to an individual employee. Deducts
-    stock and is merged into the main Challan Dashboard via its
-    `challan` link."""
-
-    employee_name = models.CharField(max_length=255)
-    challan = models.OneToOneField(
-        Challan,
-        on_delete=models.CASCADE,
-        related_name="employee_stock_challan",
-    )
-    delivered_by = models.CharField(max_length=255, blank=True)
-    adjust_requested = models.BooleanField("Adjust", default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Stock hand challan for {self.employee_name} ({self.challan.challan_no})"
-
-
-class EmployeeStockChallanItem(models.Model):
-    employee_stock_challan = models.ForeignKey(
-        EmployeeStockChallan, on_delete=models.CASCADE, related_name="items"
-    )
-    stock_item = models.ForeignKey(StockItem, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
-
-    def save(self, *args, **kwargs):
-        is_new = self._state.adding
-        super().save(*args, **kwargs)
-        if is_new:
-            StockItem.objects.filter(pk=self.stock_item_id).update(
-                quantity_available=models.F("quantity_available") - self.quantity
-            )
-
-    def __str__(self):
-        return f"{self.stock_item} x{self.quantity}"
+        return f"{self.employee_name} — {self.stock_item} (+{self.quantity})"

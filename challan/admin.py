@@ -5,8 +5,6 @@ from .models import (
     Challan,
     ChallanItem,
     Client,
-    EmployeeStockChallan,
-    EmployeeStockChallanItem,
     StockIntake,
     StockItem,
     Company,
@@ -46,7 +44,8 @@ class ClientAdmin(admin.ModelAdmin):
 
 @admin.register(Billing)
 class BillingAdmin(admin.ModelAdmin):
-    list_display = ("id", "company_name", "client", "adjust_requested", "created_at")
+    list_display = ("id", "bill_no", "company_name", "client", "adjust_requested", "created_at")
+    search_fields = ("bill_no", "client__name", "company_name__name")
     filter_horizontal = ("challans",)
 
 
@@ -59,18 +58,8 @@ class StockItemAdmin(admin.ModelAdmin):
 
 @admin.register(StockIntake)
 class StockIntakeAdmin(admin.ModelAdmin):
-    list_display = ("stock_item", "quantity", "for_client", "created_at")
-
-
-class EmployeeStockChallanItemInline(admin.TabularInline):
-    model = EmployeeStockChallanItem
-    extra = 1
-
-
-@admin.register(EmployeeStockChallan)
-class EmployeeStockChallanAdmin(admin.ModelAdmin):
-    list_display = ("employee_name", "challan", "delivered_by", "created_at")
-    inlines = [EmployeeStockChallanItemInline]
+    list_display = ("employee_name", "stock_item", "quantity", "created_at")
+    search_fields = ("employee_name", "stock_item__name")
 
 
 @admin.register(Company)

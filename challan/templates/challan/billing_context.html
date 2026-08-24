@@ -13,23 +13,32 @@
 <div class="card">
   <div class="card-body">
 
-    {# Optional client filter #}
-    <form method="get" style="margin-bottom:22px;">
-      <div class="form-grid" style="grid-template-columns:1fr auto; align-items:end; gap:12px;">
+    {# Filter Form (Client & Date Range) #}
+    <form method="get" style="margin-bottom:22px; background: rgba(240, 244, 248, 0.5); padding: 16px; border-radius: 8px;">
+      <div class="form-grid" style="grid-template-columns: 1.5fr 1fr 1fr auto; align-items: end; gap: 12px;">
         <div class="form-group">
-          <label>Filter by Client <span style="font-weight:400;text-transform:none;font-size:0.8rem;">(optional — leave blank to show all)</span></label>
-          <select name="client" onchange="this.form.submit()">
+          <label>Filter by Client</label>
+          <select name="client" class="form-control">
             <option value="">— All clients —</option>
             {% for c in clients %}
               <option value="{{ c.pk }}" {% if selected_client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
-        {% if selected_client_id %}
-        <div>
-          <a href="{% url 'challan:billing_context' %}" class="btn btn-outline">Clear filter</a>
+        <div class="form-group">
+          <label>From Date</label>
+          <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
         </div>
-        {% endif %}
+        <div class="form-group">
+          <label>To Date</label>
+          <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
+          {% if selected_client_id or start_date or end_date %}
+            <a href="{% url 'challan:billing_context' %}" class="btn btn-outline" style="padding: 8px 14px;">Clear</a>
+          {% endif %}
+        </div>
       </div>
     </form>
 
@@ -42,17 +51,29 @@
 
     <form method="post" novalidate>
       {% csrf_token %}
-      {# Pass filter param back so POST can use same queryset scope #}
-      {% if selected_client_id %}
-        <input type="hidden" name="client" value="{{ selected_client_id }}">
-      {% endif %}
+      {# Pass filter params back so POST uses same queryset scope #}
+      {% if selected_client_id %}<input type="hidden" name="client" value="{{ selected_client_id }}">{% endif %}
+      {% if start_date %}<input type="hidden" name="start_date" value="{{ start_date }}">{% endif %}
+      {% if end_date %}<input type="hidden" name="end_date" value="{{ end_date }}">{% endif %}
 
-      <div class="form-grid" style="margin-bottom:20px;">
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:20px; gap: 16px;">
         <div class="form-group">
           <label>{{ form.company_name.label }} <span class="req">*</span></label>
           {{ form.company_name }}
           {{ form.company_name.errors }}
           <span style="font-size:0.78rem;color:var(--color-ink-muted);">The company issuing / sending out the challan</span>
+        </div>
+        <div class="form-group">
+          <label>{{ form.bill_no.label }} <span class="req">*</span></label>
+          {{ form.bill_no }}
+          {{ form.bill_no.errors }}
+          <span style="font-size:0.78rem;color:var(--color-ink-muted);">Bill / invoice number</span>
+        </div>
+        <div class="form-group">
+          <label>{{ form.created_at.label }} <span class="req">*</span></label>
+          {{ form.created_at }}
+          {{ form.created_at.errors }}
+          <span style="font-size:0.78rem;color:var(--color-ink-muted);">Date of billing transaction</span>
         </div>
       </div>
 
@@ -73,8 +94,8 @@
               <tr>
                 <td><input type="checkbox" name="challans" value="{{ challan.pk }}" class="challan-cb"></td>
                 <td>
-                  <a href="{% url 'challan:challan_detail' challan.pk %}"
-                     onclick="window.open(this.href,'challan_popup','width=1000,height=750,scrollbars=yes');return false;"
+                  <a href="{% url 'challan:challan_detail' challan.pk %}?popup=1"
+                     onclick="window.open(this.href,'challan_popup','width=850,height=700,scrollbars=yes');return false;"
                      class="job-num" style="text-decoration:underline;">
                     {{ challan.challan_no }}
                   </a>

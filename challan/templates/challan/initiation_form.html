@@ -47,6 +47,11 @@
           <label>Delivered By <span class="req">*</span></label>
           {{ form.delivered_by }}
         </div>
+        <div class="form-group">
+          <label>Initiation Date <span class="req">*</span></label>
+          {{ form.created_at }}
+          {{ form.created_at.errors }}
+        </div>
         <div id="received-by-section" style="display: contents;">
           <div class="form-group">
             <label>Received By — Name</label>
@@ -71,20 +76,32 @@
             {{ form.personal_details_phone.errors }}
           </div>
         </div>
-        <div class="adjust-box">
-          <label class="adjust-label" for="{{ form.adjust_requested.id_for_label }}">
-            {{ form.adjust_requested }}
+        <div class="adjust-box" style="margin-top: 15px; border-color: rgba(59, 130, 246, 0.3);">
+          <label class="adjust-label" for="{{ form.is_from_stock_intake.id_for_label }}">
+            {{ form.is_from_stock_intake }}
             <div class="adjust-text">
-              <span class="adjust-title">Adjust / Material Replacement</span>
-              <span class="adjust-desc">Admin approval will be required if checked</span>
+              <span class="adjust-title">Issue from Employee Stock Intake?</span>
+              <span class="adjust-desc">Deducts quantity directly from the employee's available stock intake</span>
             </div>
           </label>
+          <div id="stock-intake-wrapper" class="form-group" style="margin-top:10px; {% if not form.is_from_stock_intake.value %}display:none;{% endif %}">
+            <label for="id_stock_employee_name">Employee Name (Stock Intake) <span class="req">*</span></label>
+            <select name="stock_employee_name" id="id_stock_employee_name" class="form-control">
+              <option value="">— Select Employee —</option>
+              {% for emp in stock_employees %}
+                <option value="{{ emp }}" {% if form.stock_employee_name.value == emp %}selected{% endif %}>{{ emp }}</option>
+              {% endfor %}
+            </select>
+            {{ form.stock_employee_name.errors }}
+            <div id="employee-stock-items-info" style="margin-top: 8px; font-size: 0.85rem;"></div>
+          </div>
         </div>
       </div>
 
       <div class="card" style="margin-top:22px;">
         <div class="card-header"><h3>Goods Detail</h3></div>
         <div class="card-body">
+          {{ formset.non_form_errors }}
           {{ formset.management_form }}
           <div id="item-rows">
             {% for item_form in formset %}
@@ -96,10 +113,12 @@
                 <div class="form-group" style="flex: 1;">
                   <label>Item</label>
                   {{ item_form.product_name }}
+                  {{ item_form.product_name.errors }}
                 </div>
                 <div class="form-group" style="flex: 0 0 120px;">
                   <label>Qty</label>
                   {{ item_form.quantity }}
+                  {{ item_form.quantity.errors }}
                 </div>
                 <div class="delete-cell" style="padding-top: 24px;">
                   <div style="display:none;">{{ item_form.DELETE }}</div>
@@ -112,6 +131,25 @@
             {% endfor %}
           </div>
           <button type="button" class="btn btn-outline btn-sm" id="add-item-btn" style="margin-top: 12px;">+ Add item</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:22px;">
+        <div class="card-body">
+          <div class="adjust-box" style="margin: 0;">
+            <label class="adjust-label" for="{{ form.adjust_requested.id_for_label }}">
+              {{ form.adjust_requested }}
+              <div class="adjust-text">
+                <span class="adjust-title">Adjust / Material Replacement</span>
+                <span class="adjust-desc">Admin approval will be required if checked</span>
+              </div>
+            </label>
+            <div id="adjust-reason-wrapper" class="form-group" style="margin-top:10px; {% if not form.adjust_requested.value %}display:none;{% endif %}">
+              <label for="{{ form.adjust_reason.id_for_label }}">Adjustment / Replacement Details</label>
+              {{ form.adjust_reason }}
+              {{ form.adjust_reason.errors }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -131,11 +169,11 @@
     </div>
     <div class="form-group" style="flex: 1;">
       <label>Item</label>
-      <input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name">
+      <input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name" required>
     </div>
     <div class="form-group" style="flex: 0 0 120px;">
       <label>Qty</label>
-      <input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity">
+      <input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" min="1" required>
     </div>
     <div class="delete-cell" style="padding-top: 24px;">
       <div style="display:none;"><input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE"></div>
@@ -287,5 +325,128 @@ function bindRemoveRowEvents() {
 // Init row events and serial numbers
 bindRemoveRowEvents();
 recalculateSerialNumbers();
+
+// Toggle adjust reason textarea
+const adjustCheckbox = document.getElementById('{{ form.adjust_requested.id_for_label }}');
+const adjustReasonWrapper = document.getElementById('adjust-reason-wrapper');
+if (adjustCheckbox && adjustReasonWrapper) {
+  adjustCheckbox.addEventListener('change', function() {
+    adjustReasonWrapper.style.display = this.checked ? '' : 'none';
+  });
+}
+
+// Toggle stock intake section and fetch available stock items
+const stockIntakeCheckbox = document.getElementById('{{ form.is_from_stock_intake.id_for_label }}');
+const stockIntakeWrapper = document.getElementById('stock-intake-wrapper');
+const stockEmpInput = document.getElementById('id_stock_employee_name');
+const stockInfoDiv = document.getElementById('employee-stock-items-info');
+
+window.currentStockItems = [];
+
+function updateGoodsDetailInputs() {
+  const isStockIntake = stockIntakeCheckbox && stockIntakeCheckbox.checked;
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    const itemInput = row.querySelector('input[name$="-product_name"]');
+    const qtyInput = row.querySelector('input[name$="-quantity"]');
+    if (!itemInput) return;
+
+    let selectElem = row.querySelector('.stock-item-select');
+
+    if (isStockIntake && window.currentStockItems.length > 0) {
+      if (!selectElem) {
+        selectElem = document.createElement('select');
+        selectElem.className = 'form-control stock-item-select';
+        itemInput.parentNode.insertBefore(selectElem, itemInput);
+        itemInput.type = 'hidden';
+      }
+
+      let optionsHtml = '<option value="">— Select Stock Item —</option>';
+      window.currentStockItems.forEach(item => {
+        const selected = (itemInput.value === item.product_name) ? 'selected' : '';
+        optionsHtml += `<option value="${item.product_name}" data-qty="${item.available_qty}" ${selected}>${item.product_name} (${item.brand || 'General'}) — ${item.available_qty} avail</option>`;
+      });
+      selectElem.innerHTML = optionsHtml;
+
+      selectElem.onchange = function() {
+        itemInput.value = this.value;
+        const selectedOpt = this.options[this.selectedIndex];
+        if (selectedOpt && selectedOpt.dataset.qty) {
+          if (qtyInput) {
+            qtyInput.max = selectedOpt.dataset.qty;
+            if (!qtyInput.value || parseInt(qtyInput.value) <= 0) {
+              qtyInput.value = 1;
+            } else if (parseInt(qtyInput.value) > parseInt(selectedOpt.dataset.qty)) {
+              qtyInput.value = selectedOpt.dataset.qty;
+            }
+          }
+        }
+      };
+
+      if (selectElem.value) {
+        itemInput.value = selectElem.value;
+      }
+    } else {
+      if (selectElem) {
+        selectElem.remove();
+      }
+      itemInput.type = 'text';
+      if (qtyInput) qtyInput.removeAttribute('max');
+    }
+  });
+}
+
+function fetchEmployeeStock(empName) {
+  if (!empName) {
+    window.currentStockItems = [];
+    stockInfoDiv.innerHTML = '';
+    updateGoodsDetailInputs();
+    return;
+  }
+  fetch('/api/employee-stock-intakes/?employee_name=' + encodeURIComponent(empName))
+    .then(res => res.json())
+    .then(data => {
+      window.currentStockItems = data.intakes || [];
+      if (window.currentStockItems.length > 0) {
+        let html = '<div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:10px; margin-top:6px;"><strong>Available Stock for ' + empName + ':</strong><ul style="margin: 4px 0 0 18px; padding:0;">';
+        window.currentStockItems.forEach(item => {
+          html += '<li><strong>' + item.product_name + '</strong> (' + (item.brand || 'General') + ') — <span class="badge badge-success">' + item.available_qty + ' units available</span></li>';
+        });
+        html += '</ul></div>';
+        stockInfoDiv.innerHTML = html;
+      } else {
+        stockInfoDiv.innerHTML = '<div style="color:var(--color-danger); margin-top:6px;">No active stock intake found for "' + empName + '".</div>';
+      }
+      updateGoodsDetailInputs();
+    });
+}
+
+if (stockIntakeCheckbox && stockIntakeWrapper) {
+  stockIntakeCheckbox.addEventListener('change', function() {
+    stockIntakeWrapper.style.display = this.checked ? '' : 'none';
+    if (this.checked && stockEmpInput && stockEmpInput.value.trim()) {
+      fetchEmployeeStock(stockEmpInput.value.trim());
+    } else {
+      updateGoodsDetailInputs();
+    }
+  });
+}
+
+if (stockEmpInput) {
+  stockEmpInput.addEventListener('change', function() {
+    if (stockIntakeCheckbox && stockIntakeCheckbox.checked && this.value.trim()) {
+      fetchEmployeeStock(this.value.trim());
+    } else {
+      updateGoodsDetailInputs();
+    }
+  });
+}
+
+// Hook into add item button to ensure new rows get the dropdown if enabled
+const addRowBtn = document.getElementById('add-item-btn');
+if (addRowBtn) {
+  addRowBtn.addEventListener('click', function() {
+    setTimeout(updateGoodsDetailInputs, 50);
+  });
+}
 </script>
 {% endblock %}

@@ -9,7 +9,14 @@
     <h2>{{ challan.challan_no }}</h2>
   </div>
   <div class="btn-row">
-    {% if not user.is_staff and not user.is_superuser %}
+    {% if request.GET.popup %}
+      <button type="button" class="btn btn-outline" onclick="window.close()">✕ Close Window</button>
+    {% endif %}
+    {% if user.is_staff or user.is_superuser %}
+      <!-- ADMIN CONTROLS: Admin acts via notice banners below for Void, Adjustments & Unlocks -->
+
+    {% else %}
+      <!-- REGULAR STAFF CONTROLS -->
       {% if challan.status == 'pending' %}
         <form method="post" action="{% url 'challan:challan_approve' challan.pk %}" style="display:inline;">
           {% csrf_token %}
@@ -43,21 +50,48 @@
 
 {# --- Status banners --- #}
 {% if challan.void_requested and challan.status != 'void' %}
-<div class="notice warn" style="background:#fee2e2; border-color:#fca5a5; color:#991b1b;">
-  <strong>⏳ Void Requested (Pending Admin Approval)</strong> — A request to void this challan has been submitted with reason: <em>"{{ challan.void_reason }}"</em>.
+<div class="notice warn" style="background:#fee2e2; border-color:#fca5a5; color:#991b1b; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+  <div>
+    <strong>⏳ Void Requested (Pending Admin Approval)</strong> — A request to void this challan has been submitted with reason: <em>"{{ challan.void_reason }}"</em>.
+  </div>
   {% if user.is_staff or user.is_superuser %}
-    An Admin can review and approve this in the <a href="{% url 'challan:admin_panel' %}" style="font-weight:700; text-decoration:underline; color:#991b1b;">Approvals &amp; Unlocks Desk</a>.
-  {% else %}
-    Awaiting administrator approval.
+    <form method="post" style="display:inline; margin:0;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="approve_void">
+      <button class="btn btn-danger btn-sm" type="submit">Approve Void Now</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if challan.adjust_requested and not challan.admin_approved %}
+<div class="notice warn" style="background:#e0f2fe; border-color:#7dd3fc; color:#0369a1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+  <div>
+    <strong>🔧 Material Adjustment Requested (Pending Admin Approval)</strong> — Details: <em>"{{ challan.adjust_reason|default:'No details provided' }}"</em>.
+  </div>
+  {% if user.is_staff or user.is_superuser %}
+    <form method="post" style="display:inline; margin:0;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="approve_adjustment">
+      <button class="btn btn-primary btn-sm" type="submit">Approve Adjustment Now</button>
+    </form>
   {% endif %}
 </div>
 {% endif %}
 
 {% if challan.status == 'pending' %}
-  {% if challan.is_locked_out %}
-  <div class="notice error">
-    <strong>🔒 Challan Locked</strong> — This challan has exceeded its allowed window and is now locked.
-    {% if user.is_staff or user.is_superuser %}An admin can review and unlock it in the <a href="{% url 'challan:admin_panel' %}" style="font-weight:700; text-decoration:underline;">Approvals &amp; Unlocks Desk</a>.{% else %}Contact an admin to unlock.{% endif %}
+  {% if challan.is_locked_out or challan.locked %}
+  <div class="notice error" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <strong>🔒 Challan Locked</strong> — This challan has exceeded its allowed window and is now locked.
+    </div>
+    {% if user.is_staff or user.is_superuser %}
+      <form method="post" style="display:inline; margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="unlock_challan">
+        <button class="btn btn-warning btn-sm" type="submit">Unlock Challan Now</button>
+      </form>
+    {% endif %}
   </div>
   {% elif challan.can_extend %}
   <div class="notice warn">
@@ -88,6 +122,9 @@
       <div class="ticket-field"><span class="tf-label">Contact Person</span><span class="tf-value {% if not challan.contact_name %}empty{% endif %}">{{ challan.contact_name|default:"—" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Quotation Based</span><span class="tf-value">{% if challan.is_quotation_based %}Yes{% else %}No{% endif %}</span></div>
       <div class="ticket-field"><span class="tf-label">Adjust Requested</span><span class="tf-value">{% if challan.adjust_requested %}{% if challan.admin_approved %}<span class="stamp approved">Approved by Admin</span>{% else %}<span class="stamp pending">Pending Admin Approval</span>{% endif %}{% else %}No{% endif %}</span></div>
+      {% if challan.adjust_requested and challan.adjust_reason %}
+      <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Adjustment / Replacement Details</span><span class="tf-value">{{ challan.adjust_reason }}</span></div>
+      {% endif %}
       <div class="ticket-field"><span class="tf-label">Delivered By</span><span class="tf-value {% if not challan.delivered_by %}empty{% endif %}">{{ challan.delivered_by|default:"—" }}</span></div>
       {% if challan.adjust_requested %}
       <div class="ticket-field"><span class="tf-label">Personal Details — Name</span><span class="tf-value {% if not challan.personal_details_name %}empty{% endif %}">{{ challan.personal_details_name|default:"—" }} {% if challan.personal_details_phone %}({{ challan.personal_details_phone }}){% endif %}</span></div>
@@ -120,6 +157,7 @@
   </div>
   <div class="card-body">
     <div class="ticket-fields">
+      <div class="ticket-field"><span class="tf-label">Bill No.</span><span class="tf-value"><strong>{{ billing.bill_no|default:"—" }}</strong></span></div>
       <div class="ticket-field"><span class="tf-label">Specific Company Name</span><span class="tf-value {% if not billing.company_name %}empty{% endif %}">{{ billing.company_name|default:"—" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Billed On</span><span class="tf-value">{{ challan.billed_out_at|date:"d M Y, H:i" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Billing Record #</span><span class="tf-value">#{{ billing.pk }}</span></div>
@@ -146,12 +184,12 @@
   </div>
 </div>
 
-{% if challan.employee_stock_challan %}
-<div class="card">
-  <div class="card-header"><h3>Employee Stock Issue</h3></div>
+{% if challan.is_from_stock_intake %}
+<div class="card" style="margin-top:20px; border-color: rgba(59, 130, 246, 0.3);">
+  <div class="card-header"><h3>Issued from Employee Stock Intake</h3></div>
   <div class="card-body">
-    <p><strong>Employee:</strong> {{ challan.employee_stock_challan.employee_name }}</p>
-    <p><a href="{% url 'challan:employee_stock_overview' challan.employee_stock_challan.employee_name %}">View full stock history for this employee →</a></p>
+    <p><strong>Employee Name:</strong> {{ challan.stock_employee_name }}</p>
+    <p class="text-muted" style="font-size:0.85rem;">Stock quantities for this employee were automatically deducted upon challan creation.</p>
   </div>
 </div>
 {% endif %}

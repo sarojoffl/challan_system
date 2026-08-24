@@ -1,0 +1,42 @@
+{% extends "challan/base.html" %}
+{% block title %}Edit Company — {{ company.name }}{% endblock %}
+{% block page_title %}Edit Company{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Update details for {{ company.name }}</span>
+    <h2>Edit Company</h2>
+  </div>
+  <div class="btn-row">
+    <a href="{% url 'challan:company_list' %}" class="btn btn-outline">← Back to Companies</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 500px;">
+  <div class="card-header">
+    <h3>Company Details</h3>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label>Company Name <span class="req">*</span></label>
+        {{ form.name }}
+        {{ form.name.errors }}
+      </div>
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label>Company Code / Prefix <span class="req">*</span></label>
+        {{ form.code }}
+        {{ form.code.errors }}
+        <span style="font-size: 0.75rem; color: var(--color-ink-muted);">Used as prefix for challan numbers (e.g. ACME)</span>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Update Company</button>
+        <a href="{% url 'challan:company_list' %}" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

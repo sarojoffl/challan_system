@@ -22,6 +22,10 @@
         <span class="tf-value">#{{ billing.pk }}</span>
       </div>
       <div class="ticket-field">
+        <span class="tf-label">Bill No.</span>
+        <span class="tf-value"><strong>{{ billing.bill_no|default:"—" }}</strong></span>
+      </div>
+      <div class="ticket-field">
         <span class="tf-label">Specific Company Name</span>
         <span class="tf-value">{{ billing.company_name }}</span>
       </div>

@@ -1,13 +1,12 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils import timezone
 
 from .models import (
     Billing,
     Challan,
     ChallanItem,
     Client,
-    EmployeeStockChallan,
-    EmployeeStockChallanItem,
     StockIntake,
     StockItem,
     Company,
@@ -55,7 +54,20 @@ class ChallanInitiationForm(BaseStyledForm):
             "personal_details_name",
             "personal_details_phone",
             "adjust_requested",
+            "adjust_reason",
+            "is_from_stock_intake",
+            "stock_employee_name",
+            "created_at",
         ]
+        widgets = {
+            "adjust_reason": forms.Textarea(
+                attrs={"rows": 2, "placeholder": "Specify what was adjusted or replaced..."}
+            ),
+            "created_at": forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={"type": "datetime-local", "class": "form-control"}
+            ),
+        }
         labels = {
             "billed_company": "Billed Company (or Firm)",
             "challan_no": "Challan No.",
@@ -64,7 +76,16 @@ class ChallanInitiationForm(BaseStyledForm):
             "received_by_phone": "Phone No.",
             "personal_details_name": "Personal Details — Name",
             "personal_details_phone": "Phone No.",
+            "adjust_reason": "Adjustment / Replacement Details",
+            "is_from_stock_intake": "Issue from Employee Stock Intake?",
+            "stock_employee_name": "Employee Name (Stock Intake)",
+            "created_at": "Initiation Date",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.initial.get("created_at"):
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
 
     def clean_is_quotation_based(self):
         val = self.cleaned_data.get("is_quotation_based")
@@ -80,6 +101,12 @@ class ChallanInitiationForm(BaseStyledForm):
         personal_details_name = cleaned.get("personal_details_name")
         if adjust_requested and not personal_details_name:
             self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+
+        is_from_stock = cleaned.get("is_from_stock_intake")
+        stock_emp = cleaned.get("stock_employee_name")
+        if is_from_stock and not stock_emp:
+            self.add_error("stock_employee_name", "Employee name is required when issuing from Stock Intake.")
+
         return cleaned
 
     def save(self, commit=True):
@@ -93,22 +120,31 @@ class ChallanInitiationForm(BaseStyledForm):
         return instance
 
 
-class BaseChallanItemFormSet(forms.models.BaseInlineFormSet):
-    def add_fields(self, form, index):
-        super().add_fields(form, index)
-        if "serial_number" in form.fields:
-            form.fields["serial_number"].widget = forms.HiddenInput()
-            form.fields["serial_number"].required = False
-
+class BaseChallanItemFormSet(forms.BaseInlineFormSet):
     def clean(self):
         super().clean()
+        has_items = False
         idx = 1
         for form in self.forms:
-            if form.cleaned_data and not form.cleaned_data.get("DELETE", False):
-                form.cleaned_data["serial_number"] = idx
-                if hasattr(form, "instance") and form.instance:
-                    form.instance.serial_number = idx
-                idx += 1
+            if not form.cleaned_data or form.cleaned_data.get("DELETE", False):
+                continue
+
+            product = form.cleaned_data.get("product_name")
+            qty = form.cleaned_data.get("quantity")
+
+            if product and (qty is None or qty <= 0):
+                form.add_error("quantity", "Quantity is required and must be at least 1.")
+
+            if product:
+                has_items = True
+
+            form.cleaned_data["serial_number"] = idx
+            if hasattr(form, "instance") and form.instance:
+                form.instance.serial_number = idx
+            idx += 1
+
+        if not has_items and not any(self.errors):
+            raise forms.ValidationError("At least one item with a valid product name and quantity is required.")
 
     def save(self, commit=True):
         instances = super().save(commit=False)
@@ -127,7 +163,7 @@ ChallanItemFormSet = inlineformset_factory(
     Challan,
     ChallanItem,
     formset=BaseChallanItemFormSet,
-    fields=["serial_number", "product_name", "quantity"],
+    fields=["serial_number", "product_name", "quantity", "stock_intake"],
     extra=1,
     can_delete=True,
 )
@@ -149,14 +185,36 @@ class HandChallanForm(BaseStyledForm):
             "personal_details_name",
             "personal_details_phone",
             "adjust_requested",
+            "adjust_reason",
+            "is_from_stock_intake",
+            "stock_employee_name",
+            "created_at",
         ]
+        widgets = {
+            "adjust_reason": forms.Textarea(
+                attrs={"rows": 2, "placeholder": "Specify what was adjusted or replaced..."}
+            ),
+            "created_at": forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={"type": "datetime-local", "class": "form-control"}
+            ),
+        }
         labels = {
             "contact_name": "Name",
             "received_by_name": "Received By — Name",
             "received_by_phone": "Phone No.",
             "personal_details_name": "Personal Details — Name",
             "personal_details_phone": "Phone No.",
+            "adjust_reason": "Adjustment / Replacement Details",
+            "is_from_stock_intake": "Issue from Employee Stock Intake?",
+            "stock_employee_name": "Employee Name (Stock Intake)",
+            "created_at": "Hand Challan Date",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.initial.get("created_at"):
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
 
     def clean(self):
         cleaned = super().clean()
@@ -164,6 +222,12 @@ class HandChallanForm(BaseStyledForm):
         personal_details_name = cleaned.get("personal_details_name")
         if adjust_requested and not personal_details_name:
             self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+
+        is_from_stock = cleaned.get("is_from_stock_intake")
+        stock_emp = cleaned.get("stock_employee_name")
+        if is_from_stock and not stock_emp:
+            self.add_error("stock_employee_name", "Employee name is required when issuing from Stock Intake.")
+
         return cleaned
 
     def save(self, commit=True):
@@ -202,6 +266,20 @@ class BillingContextForm(forms.Form):
         label="Specific Company Name",
         required=True,
     )
+    bill_no = forms.CharField(
+        label="Bill No.",
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={"placeholder": "e.g. BILL-2026-001"}),
+    )
+    created_at = forms.DateTimeField(
+        label="Billing Date",
+        required=False,
+        widget=forms.DateTimeInput(
+            format="%Y-%m-%dT%H:%M",
+            attrs={"type": "datetime-local", "class": "form-control"}
+        ),
+    )
     challans = forms.ModelMultipleChoiceField(
         queryset=Challan.objects.none(),
         widget=forms.CheckboxSelectMultiple,
@@ -211,7 +289,11 @@ class BillingContextForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         client_id = kwargs.pop("client_id", None)
+        start_date = kwargs.pop("start_date", None)
+        end_date = kwargs.pop("end_date", None)
         super().__init__(*args, **kwargs)
+        if not self.initial.get("created_at"):
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
         qs = (
             Challan.objects.filter(status=Challan.Status.APPROVED, is_billed_out=False)
             .select_related("client")
@@ -219,6 +301,10 @@ class BillingContextForm(forms.Form):
         )
         if client_id:
             qs = qs.filter(client_id=client_id)
+        if start_date:
+            qs = qs.filter(created_at__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(created_at__date__lte=end_date)
         self.fields["challans"].queryset = qs
 
     def clean_challans(self):
@@ -242,25 +328,32 @@ class StockItemForm(BaseStyledForm):
 class StockIntakeForm(BaseStyledForm):
     class Meta:
         model = StockIntake
-        fields = ["stock_item", "for_client", "quantity"]
+        fields = ["employee_name", "stock_item", "quantity", "created_at"]
+        labels = {
+            "employee_name": "Employee Name",
+            "stock_item": "Stock Item",
+            "quantity": "Intake Qty",
+            "created_at": "Intake Date",
+        }
+        widgets = {
+            "created_at": forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={"type": "datetime-local", "class": "form-control"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.initial.get("created_at"):
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
 
 
-# ---------------------------------------------------------------------
-# Stock / Hand Challan for employees
-# ---------------------------------------------------------------------
-class EmployeeStockChallanForm(forms.ModelForm):
-    class Meta:
-        model = EmployeeStockChallan
-        fields = ["employee_name", "delivered_by", "adjust_requested"]
-
-
-EmployeeStockChallanItemFormSet = inlineformset_factory(
-    EmployeeStockChallan,
-    EmployeeStockChallanItem,
-    fields=["stock_item", "quantity"],
-    extra=1,
-    can_delete=True,
-)
+class StockDecreaseForm(forms.Form):
+    decrease_quantity = forms.IntegerField(
+        min_value=1,
+        label="Decrease Qty",
+        widget=forms.NumberInput(attrs={"class": "form-control", "placeholder": "Qty to deduct"}),
+    )
 
 
 # ---------------------------------------------------------------------
@@ -271,3 +364,20 @@ class ChallanExtendForm(forms.Form):
         label="Reason for Extension",
         widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Explain why this challan needs more time…"}),
     )
+
+
+# ---------------------------------------------------------------------
+# Company Management
+# ---------------------------------------------------------------------
+class CompanyForm(BaseStyledForm):
+    class Meta:
+        model = Company
+        fields = ["name", "code"]
+        labels = {
+            "name": "Company Name",
+            "code": "Company Code / Prefix",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "e.g. Acme Corp"}),
+            "code": forms.TextInput(attrs={"placeholder": "e.g. ACME"}),
+        }
