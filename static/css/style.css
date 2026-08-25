@@ -309,8 +309,10 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--color-pr
 }
 .form-actions { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--color-line); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-.formset-row { display: grid; grid-template-columns: 90px 1fr 100px 40px; gap: 10px; align-items: end; margin-bottom: 10px; }
-.formset-row .delete-cell { display: flex; align-items: center; justify-content: center; padding-bottom: 10px; }
+.formset-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 12px; width: 100%; }
+.formset-row .sn-cell { display: flex; align-items: center; height: 38px; margin-bottom: 2px; }
+.formset-row .delete-cell { display: flex; align-items: center; justify-content: center; height: 38px; margin-bottom: 2px; }
+.formset-row label { white-space: nowrap; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
 
 .notice { background: rgba(0,102,204,0.06); border: 1px solid rgba(0,102,204,0.2); border-radius: var(--radius-sm); padding: 12px 18px; font-size: 0.86rem; font-weight: 600; color: var(--color-accent); margin-bottom: 18px; }
 .notice.success { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-text); }

@@ -84,6 +84,11 @@ class ChallanInitiationForm(BaseStyledForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            if self.instance.is_quotation_based is not None:
+                self.initial["is_quotation_based"] = str(self.instance.is_quotation_based)
+            if self.instance.created_at:
+                self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%dT%H:%M")
         if not self.initial.get("created_at"):
             self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
 
@@ -100,7 +105,11 @@ class ChallanInitiationForm(BaseStyledForm):
         adjust_requested = cleaned.get("adjust_requested")
         personal_details_name = cleaned.get("personal_details_name")
         if adjust_requested and not personal_details_name:
-            self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+            rec_name = cleaned.get("received_by_name") or (self.instance and getattr(self.instance, "received_by_name", ""))
+            if rec_name:
+                cleaned["personal_details_name"] = rec_name
+            else:
+                self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
 
         is_from_stock = cleaned.get("is_from_stock_intake")
         stock_emp = cleaned.get("stock_employee_name")
@@ -121,6 +130,12 @@ class ChallanInitiationForm(BaseStyledForm):
 
 
 class BaseChallanItemFormSet(forms.BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        if instance and instance.pk and instance.items.exists():
+            self.extra = 0
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         super().clean()
         has_items = False
@@ -163,7 +178,7 @@ ChallanItemFormSet = inlineformset_factory(
     Challan,
     ChallanItem,
     formset=BaseChallanItemFormSet,
-    fields=["serial_number", "product_name", "quantity", "stock_intake"],
+    fields=["serial_number", "product_name", "quantity", "actual_qty", "stock_intake"],
     extra=1,
     can_delete=True,
 )
@@ -213,6 +228,8 @@ class HandChallanForm(BaseStyledForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.created_at:
+            self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%dT%H:%M")
         if not self.initial.get("created_at"):
             self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
 
@@ -221,7 +238,11 @@ class HandChallanForm(BaseStyledForm):
         adjust_requested = cleaned.get("adjust_requested")
         personal_details_name = cleaned.get("personal_details_name")
         if adjust_requested and not personal_details_name:
-            self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
+            rec_name = cleaned.get("received_by_name") or (self.instance and getattr(self.instance, "received_by_name", ""))
+            if rec_name:
+                cleaned["personal_details_name"] = rec_name
+            else:
+                self.add_error("personal_details_name", "Personal Details Name is required when Adjust is checked.")
 
         is_from_stock = cleaned.get("is_from_stock_intake")
         stock_emp = cleaned.get("stock_employee_name")

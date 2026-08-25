@@ -14,6 +14,7 @@
   <div class="card-body">
     <form method="post" novalidate>
       {% csrf_token %}
+      {{ form.non_field_errors }}
       <div class="form-grid">
         {% if challan.challan_type == 'quotation' %}
         <div class="form-group">
@@ -56,6 +57,12 @@
           <label>Delivered By <span class="req">*</span></label>
           {{ form.delivered_by }}
           {{ form.delivered_by.errors }}
+        </div>
+        
+        <div class="form-group">
+          <label>{% if challan.challan_type == 'quotation' %}Initiation Date{% else %}Hand Challan Date{% endif %} <span class="req">*</span></label>
+          {{ form.created_at }}
+          {{ form.created_at.errors }}
         </div>
         
         <div id="received-by-section" style="display: contents;">
@@ -106,23 +113,34 @@
           {{ formset.management_form }}
           <div id="item-rows">
             {% for item_form in formset %}
-              <div class="formset-row item-row" style="align-items: flex-start;">
-                <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+              <div class="formset-row item-row">
+                <div class="sn-cell" style="flex: 0 0 40px;">
                   <span class="sn-label sn-badge">#{{ forloop.counter }}</span>
                   <div style="display:none;">{{ item_form.serial_number }}</div>
                 </div>
-                <div class="form-group" style="flex: 1;">
+                <div class="form-group" style="flex: 1 1 auto; min-width: 140px;">
                   <label>Item</label>
                   {{ item_form.product_name }}
+                  {{ item_form.product_name.errors }}
                 </div>
-                <div class="form-group" style="flex: 0 0 120px;">
+                <div class="form-group" style="flex: 0 0 80px;">
                   <label>Qty</label>
                   {{ item_form.quantity }}
+                  {{ item_form.quantity.errors }}
                 </div>
-                <div class="delete-cell" style="padding-top: 24px;">
+                <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
+                  <label>Actual Qty</label>
+                  {{ item_form.actual_qty }}
+                  {{ item_form.actual_qty.errors }}
+                </div>
+                <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
+                  <label>Adjusted Qty</label>
+                  <input type="text" class="adjusted-qty-display form-control" readonly placeholder="auto" style="background: rgba(240,244,248,0.8); color: var(--color-ink-muted);">
+                </div>
+                <div class="delete-cell" style="flex: 0 0 36px;">
                   <div style="display:none;">{{ item_form.DELETE }}</div>
                   <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 -.5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                   </button>
                 </div>
                 {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
@@ -142,23 +160,31 @@
 </div>
 
 <template id="empty-item-template">
-  <div class="formset-row item-row" style="align-items: flex-start;">
-    <div class="sn-cell" style="padding-top: 28px; flex: 0 0 auto;">
+  <div class="formset-row item-row">
+    <div class="sn-cell" style="flex: 0 0 40px;">
       <span class="sn-label sn-badge">#__sn__</span>
       <div style="display:none;"><input type="hidden" name="items-__prefix__-serial_number" id="id_items-__prefix__-serial_number" value="__sn__"></div>
     </div>
-    <div class="form-group" style="flex: 1;">
+    <div class="form-group" style="flex: 1 1 auto; min-width: 140px;">
       <label>Item</label>
       <input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name">
     </div>
-    <div class="form-group" style="flex: 0 0 120px;">
+    <div class="form-group" style="flex: 0 0 80px;">
       <label>Qty</label>
       <input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity">
     </div>
-    <div class="delete-cell" style="padding-top: 24px;">
+    <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
+      <label>Actual Qty</label>
+      <input type="number" name="items-__prefix__-actual_qty" id="id_items-__prefix__-actual_qty" min="0" class="actual-qty-input">
+    </div>
+    <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
+      <label>Adjusted Qty</label>
+      <input type="text" class="adjusted-qty-display form-control" readonly placeholder="auto" style="background: rgba(240,244,248,0.8); color: var(--color-ink-muted);">
+    </div>
+    <div class="delete-cell" style="flex: 0 0 36px;">
       <div style="display:none;"><input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE"></div>
       <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: var(--color-danger); border-color: rgba(235,87,87,0.2);" title="Remove Item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 -.5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
       </button>
     </div>
   </div>
@@ -279,6 +305,12 @@ document.getElementById('add-item-btn').addEventListener('click', function () {
   document.getElementById('item-rows').insertAdjacentHTML('beforeend', template);
   totalForms.value = index + 1;
   
+  if (adjustCheckbox && adjustCheckbox.checked) {
+    const newRow = document.querySelector('#item-rows .item-row:last-child');
+    newRow.querySelectorAll('.adjust-qty-col').forEach(col => col.style.display = '');
+    bindAdjustedQtyCalc();
+  }
+
   // Bind remove button to the new row
   bindRemoveRowEvents();
 });
@@ -286,7 +318,6 @@ document.getElementById('add-item-btn').addEventListener('click', function () {
 // Remove Item Row
 function bindRemoveRowEvents() {
   document.querySelectorAll('.btn-remove-row').forEach(btn => {
-    // Remove existing event listeners to avoid duplicates
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
     
@@ -295,11 +326,9 @@ function bindRemoveRowEvents() {
       const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
       
       if (deleteCheckbox) {
-        // If it's an existing database row, mark it for deletion and hide it
         deleteCheckbox.checked = true;
         row.style.display = 'none';
       } else {
-        // If it's a newly added row, remove it from DOM
         row.remove();
       }
       recalculateSerialNumbers();
@@ -311,13 +340,54 @@ function bindRemoveRowEvents() {
 bindRemoveRowEvents();
 recalculateSerialNumbers();
 
-// Toggle adjust reason textarea
+// Toggle adjust reason textarea + Actual/Adjusted Qty columns
 const adjustCheckbox = document.getElementById('{{ form.adjust_requested.id_for_label }}');
 const adjustReasonWrapper = document.getElementById('adjust-reason-wrapper');
-if (adjustCheckbox && adjustReasonWrapper) {
-  adjustCheckbox.addEventListener('change', function() {
-    adjustReasonWrapper.style.display = this.checked ? '' : 'none';
+
+function toggleAdjustQtyCols(show) {
+  document.querySelectorAll('.adjust-qty-col').forEach(col => {
+    col.style.display = show ? '' : 'none';
   });
+  if (!show) {
+    document.querySelectorAll('[name$="-actual_qty"]').forEach(input => {
+      input.value = '';
+    });
+    document.querySelectorAll('.adjusted-qty-display').forEach(el => {
+      el.value = '';
+    });
+  }
+}
+
+function bindAdjustedQtyCalc() {
+  document.querySelectorAll('#item-rows .item-row').forEach(row => {
+    const qtyInput = row.querySelector('[name$="-quantity"]');
+    const actualInput = row.querySelector('[name$="-actual_qty"]');
+    const adjustedDisplay = row.querySelector('.adjusted-qty-display');
+    if (!qtyInput || !actualInput || !adjustedDisplay) return;
+    const calc = () => {
+      const qty = parseInt(qtyInput.value) || 0;
+      const actual = parseInt(actualInput.value);
+      if (!isNaN(actual) && actualInput.value !== '') {
+        adjustedDisplay.value = Math.max(0, qty - actual);
+      } else {
+        adjustedDisplay.value = '';
+      }
+    };
+    actualInput.addEventListener('input', calc);
+    qtyInput.addEventListener('input', calc);
+  });
+}
+
+if (adjustCheckbox) {
+  adjustCheckbox.addEventListener('change', function() {
+    if (adjustReasonWrapper) adjustReasonWrapper.style.display = this.checked ? '' : 'none';
+    toggleAdjustQtyCols(this.checked);
+    if (this.checked) bindAdjustedQtyCalc();
+  });
+  if (adjustCheckbox.checked) {
+    toggleAdjustQtyCols(true);
+    bindAdjustedQtyCalc();
+  }
 }
 </script>
 {% endblock %}

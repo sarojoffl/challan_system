@@ -24,6 +24,7 @@
       <div class="form-grid">
         <div class="form-group" style="grid-column: 1 / -1;">
           <label>Employee Name <span class="req">*</span></label>
+          {% if employees %}
           <select id="item-emp-select" class="form-control" style="margin-bottom: 6px;" onchange="toggleNewEmpInput(this.value)">
             <option value="">— Select Existing Employee —</option>
             {% for emp in employees %}
@@ -31,7 +32,10 @@
             {% endfor %}
             <option value="__NEW__">+ Enter New Employee Name</option>
           </select>
-          <input type="text" name="item-employee_name" id="item-emp-input" class="form-control" placeholder="Enter new employee name..." style="display: none;" required>
+          <input type="text" name="item-employee_name" id="item-emp-input" class="form-control" placeholder="Enter new employee name..." style="display: none;">
+          {% else %}
+          <input type="text" name="item-employee_name" id="item-emp-input" class="form-control" placeholder="Enter employee name..." required>
+          {% endif %}
         </div>
         <div class="form-group">
           <label>Item Name <span class="req">*</span></label>
@@ -207,17 +211,21 @@
 
 <script>
 function toggleNewEmpInput(val) {
-  const textInput = document.getElementById('item-emp-text');
+  const textInput = document.getElementById('item-emp-input');
+  if (!textInput) return;
   if (val === '__NEW__') {
     textInput.style.display = 'block';
     textInput.value = '';
+    textInput.required = true;
     textInput.focus();
   } else if (val) {
     textInput.style.display = 'none';
     textInput.value = val;
+    textInput.required = false;
   } else {
     textInput.style.display = 'none';
     textInput.value = '';
+    textInput.required = false;
   }
 }
 

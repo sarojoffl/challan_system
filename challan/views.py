@@ -298,9 +298,31 @@ def challan_edit(request, pk):
                     if instance.adjust_requested and "adjust_requested" in form.changed_data:
                         instance.admin_approved = False
                     instance.save()
-                    formset.save()
+                    saved_items = formset.save(commit=False)
+                    for item in saved_items:
+                        item.challan = instance
+                        if instance.adjust_requested and item.actual_qty is not None:
+                            item.adjusted_qty = max(0, item.quantity - item.actual_qty)
+                        else:
+                            item.actual_qty = None
+                            item.adjusted_qty = None
+                        item.save()
+                    formset.save_m2m()
                 messages.success(request, f"Challan {challan.challan_no} updated successfully.")
                 return redirect("challan:challan_detail", pk=pk)
+        else:
+            err_list = []
+            if form.errors:
+                for k, v in form.errors.items():
+                    err_list.append(f"{k}: {', '.join(v)}")
+            if formset.errors:
+                for idx, f_err in enumerate(formset.errors, start=1):
+                    if f_err:
+                        for k, v in f_err.items():
+                            err_list.append(f"Item #{idx} {k}: {', '.join(v)}")
+            if formset.non_form_errors():
+                err_list.append(f"Items: {', '.join(formset.non_form_errors())}")
+            messages.error(request, "Failed to save: " + " | ".join(err_list))
     else:
         initial = {"client_name": challan.client.name}
         form = FormClass(instance=challan, initial=initial)
@@ -376,10 +398,16 @@ def initiation_form(request):
                 with transaction.atomic():
                     challan = form.save(commit=False)
                     challan.created_by = request.user
+                    challan.status = Challan.Status.PENDING
                     challan.save()
                     saved_items = formset.save(commit=False)
                     for item in saved_items:
                         item.challan = challan
+                        if challan.adjust_requested and item.actual_qty is not None:
+                            item.adjusted_qty = max(0, item.quantity - item.actual_qty)
+                        else:
+                            item.actual_qty = None
+                            item.adjusted_qty = None
                         item.save()
                     formset.save_m2m()
                     if challan.is_from_stock_intake:
@@ -425,11 +453,16 @@ def hand_challan_form(request):
                 with transaction.atomic():
                     challan = form.save(commit=False)
                     challan.created_by = request.user
-                    challan.status = Challan.Status.APPROVED
+                    challan.status = Challan.Status.PENDING
                     challan.save()
                     saved_items = formset.save(commit=False)
                     for item in saved_items:
                         item.challan = challan
+                        if challan.adjust_requested and item.actual_qty is not None:
+                            item.adjusted_qty = max(0, item.quantity - item.actual_qty)
+                        else:
+                            item.actual_qty = None
+                            item.adjusted_qty = None
                         item.save()
                     formset.save_m2m()
                     if challan.is_from_stock_intake:

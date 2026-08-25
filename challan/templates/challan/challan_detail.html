@@ -172,12 +172,30 @@
   <div class="card-header"><h3>Goods Detail</h3></div>
   <div class="table-responsive">
     <table>
-      <thead><tr><th>S.N.</th><th>Item</th><th>Qty</th></tr></thead>
+      <thead>
+        <tr>
+          <th>S.N.</th>
+          <th>Item</th>
+          <th>Qty</th>
+          {% if challan.adjust_requested %}
+          <th>Actual Qty</th>
+          <th>Adjusted Qty</th>
+          {% endif %}
+        </tr>
+      </thead>
       <tbody>
         {% for item in challan.items.all %}
-        <tr><td>{{ item.serial_number }}</td><td>{{ item.product_name }}</td><td>{{ item.quantity }}</td></tr>
+        <tr>
+          <td>{{ item.serial_number }}</td>
+          <td>{{ item.product_name }}</td>
+          <td>{{ item.quantity }}</td>
+          {% if challan.adjust_requested %}
+          <td>{{ item.actual_qty|default:"—" }}</td>
+          <td>{% if item.adjusted_qty is not None %}<strong>{{ item.adjusted_qty }}</strong>{% else %}—{% endif %}</td>
+          {% endif %}
+        </tr>
         {% empty %}
-        <tr><td colspan="3"><div class="empty-state">No items on this challan.</div></td></tr>
+        <tr><td colspan="{% if challan.adjust_requested %}5{% else %}3{% endif %}"><div class="empty-state">No items on this challan.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>

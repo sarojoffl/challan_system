@@ -9,7 +9,11 @@
       {% csrf_token %}
       <div class="form-group full" style="margin-bottom:14px;">
         <label>New Challan No. <span class="req">*</span></label>
-        {{ form.new_challan_no }}
+        <input type="hidden" name="new_challan_no" id="id_new_challan_no" value="{{ form.new_challan_no.value|default:'' }}">
+        <div class="input-group">
+          <span class="input-prefix" id="challan-prefix"></span>
+          <input type="text" id="challan-seq-input" class="form-control" placeholder="Number" autocomplete="off" required>
+        </div>
         {{ form.new_challan_no.errors }}
       </div>
       <div class="form-group full">
@@ -24,4 +28,50 @@
     </form>
   </div>
 </div>
+
+<script>
+(function() {
+  const prefixEl = document.getElementById('challan-prefix');
+  const seqInput = document.getElementById('challan-seq-input');
+  const hiddenInput = document.getElementById('id_new_challan_no');
+  const originalChallanNo = "{{ challan.challan_no|escapejs }}";
+  const companyCode = "{% if challan.billed_company %}{{ challan.billed_company.code|escapejs }}{% endif %}";
+
+  let prefix = "";
+  let defaultSeq = "";
+
+  const dashIdx = originalChallanNo.lastIndexOf('-');
+  if (dashIdx > 0) {
+    prefix = originalChallanNo.substring(0, dashIdx + 1);
+    defaultSeq = originalChallanNo.substring(dashIdx + 1);
+  } else if (companyCode) {
+    prefix = companyCode + '-';
+    defaultSeq = originalChallanNo;
+  }
+
+  prefixEl.textContent = prefix;
+  if (!prefix) {
+    prefixEl.style.display = 'none';
+  }
+
+  if (hiddenInput.value) {
+    const hiddenVal = hiddenInput.value;
+    if (prefix && hiddenVal.startsWith(prefix)) {
+      seqInput.value = hiddenVal.substring(prefix.length);
+    } else {
+      seqInput.value = hiddenVal;
+    }
+  } else {
+    seqInput.value = defaultSeq;
+  }
+
+  function syncNewChallanNo() {
+    const seq = seqInput.value.trim();
+    hiddenInput.value = (prefix && seq) ? prefix + seq : seq;
+  }
+
+  seqInput.addEventListener('input', syncNewChallanNo);
+  syncNewChallanNo();
+})();
+</script>
 {% endblock %}

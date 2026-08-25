@@ -263,6 +263,14 @@ class ChallanItem(models.Model):
     serial_number = models.PositiveIntegerField("S.N.")
     product_name = models.CharField("Item / Goods detail", max_length=255)
     quantity = models.PositiveIntegerField("Qty")
+    actual_qty = models.PositiveIntegerField(
+        "Actual Qty", null=True, blank=True,
+        help_text="Quantity actually received/confirmed by client (only for adjustments)"
+    )
+    adjusted_qty = models.PositiveIntegerField(
+        "Adjusted Qty", null=True, blank=True,
+        help_text="Auto-calculated: Original Qty − Actual Qty"
+    )
     stock_intake = models.ForeignKey(
         "StockIntake",
         on_delete=models.SET_NULL,
