@@ -1,8 +1,10 @@
+import csv
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import models, transaction
 from django.db.models import F, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -130,6 +132,71 @@ def challan_detail(request, pk):
         return redirect("challan:challan_detail", pk=pk)
 
     return render(request, "challan/challan_detail.html", {"challan": challan})
+
+
+@login_required
+def export_challan_csv(request, pk):
+    challan = get_object_or_404(
+        Challan.objects.select_related("client", "billed_company").prefetch_related("items"), pk=pk
+    )
+    
+    filename = f"Challan_{challan.challan_no}.csv"
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(["CHALLAN DETAILS"])
+    writer.writerow(["Challan No.", challan.challan_no])
+    writer.writerow(["Challan Type", challan.get_challan_type_display()])
+    if challan.billed_company:
+        writer.writerow(["Billed Company", challan.billed_company.name])
+    writer.writerow(["Client Name", challan.client.name])
+    if challan.contact_name:
+        writer.writerow(["Contact Person", challan.contact_name])
+    writer.writerow(["Date", challan.created_at.strftime("%Y-%m-%d %H:%M")])
+    writer.writerow(["Status", challan.status])
+    if challan.delivered_by:
+        writer.writerow(["Delivered By", challan.delivered_by])
+    
+    if challan.adjust_requested:
+        rec_name = challan.personal_details_name or challan.received_by_name
+        rec_phone = challan.personal_details_phone or challan.received_by_phone
+    else:
+        rec_name = challan.received_by_name
+        rec_phone = challan.received_by_phone
+        
+    if rec_name:
+        rec_text = f"{rec_name} ({rec_phone})" if rec_phone else rec_name
+        writer.writerow(["Received By / Personal Details", rec_text])
+        
+    if challan.adjust_requested:
+        writer.writerow(["Adjust / Material Replacement", "Yes"])
+        if challan.adjust_reason:
+            writer.writerow(["Adjustment Details", challan.adjust_reason])
+
+    writer.writerow([])  # Spacer row
+    writer.writerow(["GOODS DETAIL"])
+
+    if challan.adjust_requested:
+        writer.writerow(["S.N.", "Item Name", "Quantity", "Actual Qty", "Adjusted Qty"])
+        for item in challan.items.all():
+            writer.writerow([
+                item.serial_number,
+                item.product_name,
+                item.quantity,
+                item.actual_qty if item.actual_qty is not None else "",
+                item.adjusted_qty if item.adjusted_qty is not None else "",
+            ])
+    else:
+        writer.writerow(["S.N.", "Item Name", "Quantity"])
+        for item in challan.items.all():
+            writer.writerow([
+                item.serial_number,
+                item.product_name,
+                item.quantity,
+            ])
+
+    return response
 
 
 @login_required
