@@ -327,6 +327,21 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--color-pr
 .ticket-field .tf-value { display: block; font-size: 0.95rem; margin-top: 3px; }
 .ticket-field .tf-value.empty { color: var(--color-ink-faint); font-style: italic; }
 
+/* ── Nepali (BS) Date ─────────────────────────────────────────────────── */
+.bs-date {
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  opacity: 0.85;
+}
+.bs-date-below-preview {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }

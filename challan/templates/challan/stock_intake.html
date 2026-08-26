@@ -1,4 +1,5 @@
 {% extends "challan/base.html" %}
+{% load nepali_date_tags %}
 {% block title %}Stock Intake — Challan System{% endblock %}
 {% block page_title %}Stock Intake{% endblock %}
 {% block content %}
@@ -162,8 +163,8 @@
                 {{ intake.quantity }} units
               </span>
             </td>
-            <td>{{ intake.created_at|date:"d M Y, H:i" }}</td>
-            <td>{{ intake.updated_at|date:"d M Y, H:i" }}</td>
+            <td>{{ intake.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ intake.created_at|bs_date }}</span></td>
+            <td>{{ intake.updated_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ intake.updated_at|bs_date }}</span></td>
             {% if not user.is_staff and not user.is_superuser %}
             <td style="text-align: right;">
               {% if intake.quantity > 0 %}
@@ -240,5 +241,6 @@ function hideDecreaseModal() {
   document.getElementById('decreaseModal').style.display = 'none';
 }
 </script>
+
 
 {% endblock %}

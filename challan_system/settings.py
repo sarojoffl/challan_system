@@ -68,6 +68,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "challan.context_processors.admin_counts",
+                "challan.context_processors.common_form_data",
             ],
         },
     },

@@ -1,4 +1,5 @@
 {% extends "challan/base.html" %}
+{% load nepali_date_tags %}
 {% block title %}{{ challan.challan_no }} — Challan System{% endblock %}
 {% block page_title %}Challan {{ challan.challan_no }}{% endblock %}
 {% block content %}
@@ -97,12 +98,12 @@
   {% elif challan.can_extend %}
   <div class="notice warn">
     <strong>⚠ Overdue</strong> — Past the 3-day window. You can extend once (until day 7) but you must provide a reason.
-    The challan will <strong>lock on {{ challan.overdue_lock_deadline|date:"d M Y, H:i" }}</strong> if not extended.
+    The challan will <strong>lock on {{ challan.overdue_lock_deadline|date:"d M Y, H:i" }} ({{ challan.overdue_lock_deadline|bs_date }})</strong> if not extended.
   </div>
   {% elif challan.extension_days > 0 %}
   <div class="notice warn">
-    <strong>⏳ Extended</strong> — Extended on {{ challan.extended_at|date:"d M Y" }}.
-    Active until <strong>{{ challan.extension_deadline|date:"d M Y, H:i" }}</strong>. No further extension allowed.
+    <strong>⏳ Extended</strong> — Extended on {{ challan.extended_at|date:"d M Y" }} ({{ challan.extended_at|bs_date }}).
+    Active until <strong>{{ challan.extension_deadline|date:"d M Y, H:i" }} ({{ challan.extension_deadline|bs_date }})</strong>. No further extension allowed.
   </div>
   {% endif %}
 {% endif %}
@@ -132,9 +133,10 @@
       {% else %}
       <div class="ticket-field"><span class="tf-label">Received By — Name</span><span class="tf-value {% if not challan.received_by_name %}empty{% endif %}">{{ challan.received_by_name|default:"—" }} {% if challan.received_by_phone %}({{ challan.received_by_phone }}){% endif %}</span></div>
       {% endif %}
-      <div class="ticket-field"><span class="tf-label">Initial Deadline</span><span class="tf-value">{{ challan.initial_deadline|date:"d M Y, H:i" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Created Date</span><span class="tf-value">{{ challan.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ challan.created_at|bs_date }}</span></span></div>
+      <div class="ticket-field"><span class="tf-label">Initial Deadline</span><span class="tf-value">{{ challan.initial_deadline|date:"d M Y, H:i" }}<br><span class="bs-date">{{ challan.initial_deadline|bs_date }}</span></span></div>
       {% if challan.extension_days > 0 %}
-      <div class="ticket-field"><span class="tf-label">Extended Deadline</span><span class="tf-value">{{ challan.extension_deadline|date:"d M Y, H:i" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Extended Deadline</span><span class="tf-value">{{ challan.extension_deadline|date:"d M Y, H:i" }}<br><span class="bs-date">{{ challan.extension_deadline|bs_date }}</span></span></div>
       <div class="ticket-field full" style="grid-column:1/-1;"><span class="tf-label">Extension Reason</span><span class="tf-value">{{ challan.extend_reason }}</span></div>
       {% endif %}
       <div class="ticket-field"><span class="tf-label">Billed Out</span><span class="tf-value">{% if challan.is_billed_out %}<span class="stamp approved">Yes</span>{% else %}No{% endif %}</span></div>
@@ -160,7 +162,7 @@
     <div class="ticket-fields">
       <div class="ticket-field"><span class="tf-label">Bill No.</span><span class="tf-value"><strong>{{ billing.bill_no|default:"—" }}</strong></span></div>
       <div class="ticket-field"><span class="tf-label">Specific Company Name</span><span class="tf-value {% if not billing.company_name %}empty{% endif %}">{{ billing.company_name|default:"—" }}</span></div>
-      <div class="ticket-field"><span class="tf-label">Billed On</span><span class="tf-value">{{ challan.billed_out_at|date:"d M Y, H:i" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Billed On</span><span class="tf-value">{{ challan.billed_out_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ challan.billed_out_at|bs_date }}</span></span></div>
       <div class="ticket-field"><span class="tf-label">Billing Record #</span><span class="tf-value">#{{ billing.pk }}</span></div>
       <div class="ticket-field"><span class="tf-label">Client</span><span class="tf-value">{{ billing.client }}</span></div>
     </div>

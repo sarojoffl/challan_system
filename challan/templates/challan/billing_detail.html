@@ -1,4 +1,5 @@
 {% extends "challan/base.html" %}
+{% load nepali_date_tags %}
 {% block title %}Billing Receipt #{{ billing.pk }} — Challan System{% endblock %}
 {% block page_title %}Billing Receipt #{{ billing.pk }}{% endblock %}
 {% block content %}
@@ -35,7 +36,7 @@
       </div>
       <div class="ticket-field">
         <span class="tf-label">Billed Date</span>
-        <span class="tf-value">{{ billing.created_at|date:"d M Y, H:i" }}</span>
+        <span class="tf-value">{{ billing.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ billing.created_at|bs_date }}</span></span>
       </div>
       <div class="ticket-field">
         <span class="tf-label">Adjust Included?</span>

@@ -34,6 +34,7 @@ class ChallanInitiationForm(BaseStyledForm):
     client_name = forms.CharField(
         label="Client's Name",
         help_text="New clients are created automatically.",
+        widget=forms.TextInput(attrs={"list": "existing-clients", "autocomplete": "off"}),
     )
     is_quotation_based = forms.ChoiceField(
         label="Quotation Based",
@@ -179,6 +180,9 @@ ChallanItemFormSet = inlineformset_factory(
     ChallanItem,
     formset=BaseChallanItemFormSet,
     fields=["serial_number", "product_name", "quantity", "actual_qty", "stock_intake"],
+    widgets={
+        "product_name": forms.TextInput(attrs={"list": "existing-items", "autocomplete": "off"}),
+    },
     extra=1,
     can_delete=True,
 )
@@ -188,7 +192,10 @@ ChallanItemFormSet = inlineformset_factory(
 # Hand Challan (auto-generated challan no.)
 # ---------------------------------------------------------------------
 class HandChallanForm(BaseStyledForm):
-    client_name = forms.CharField(label="Client's Name")
+    client_name = forms.CharField(
+        label="Client's Name",
+        widget=forms.TextInput(attrs={"list": "existing-clients", "autocomplete": "off"}),
+    )
 
     class Meta:
         model = Challan

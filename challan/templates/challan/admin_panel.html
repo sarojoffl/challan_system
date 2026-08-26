@@ -1,4 +1,5 @@
 {% extends "challan/base.html" %}
+{% load nepali_date_tags %}
 {% block title %}Admin Panel — Challan System{% endblock %}
 {% block page_title %}Admin Control & Approval Panel{% endblock %}
 
@@ -69,7 +70,7 @@
               </ul>
             </td>
             <td style="font-size: 0.85rem; max-width: 220px;">{{ c.adjust_reason|default:"—" }}</td>
-            <td>{{ c.created_at|date:"d M Y, H:i" }}</td>
+            <td>{{ c.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
             <td style="text-align: right;">
               <form method="post" style="display: inline;">
                 {% csrf_token %}
@@ -121,7 +122,7 @@
             <td>{{ c.client.name }}</td>
             <td><span class="badge">{{ c.get_status_display }}</span></td>
             <td><span style="font-size: 0.82rem; font-weight:600; color: #991b1b;">{{ c.void_reason|default:"No reason provided" }}</span></td>
-            <td>{{ c.created_at|date:"d M Y" }}</td>
+            <td>{{ c.created_at|date:"d M Y" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
             <td style="text-align: right;">
               <form method="post" style="display: inline;">
                 {% csrf_token %}
@@ -172,7 +173,7 @@
             </td>
             <td>{{ c.client.name }}</td>
             <td><span class="badge">{{ c.get_challan_type_display }}</span></td>
-            <td>{{ c.created_at|date:"d M Y" }}</td>
+            <td>{{ c.created_at|date:"d M Y" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
             <td><span style="font-size: 0.82rem; color: var(--color-ink-muted);">{{ c.extend_reason|default:"No extension requested" }}</span></td>
             <td style="text-align: right;">
               <form method="post" style="display: inline;">

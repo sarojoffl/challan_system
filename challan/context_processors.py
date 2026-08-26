@@ -12,3 +12,17 @@ def admin_counts(request):
         'admin_locked_count': locked_count,
         'admin_total_pending_count': pending_adjust + pending_void + locked_count,
     }
+
+
+def common_form_data(request):
+    if not request.user.is_authenticated:
+        return {}
+    from .models import Client, ChallanItem, StockItem
+    clients = list(Client.objects.values_list("name", flat=True).order_by("name"))
+    items_challan = set(ChallanItem.objects.values_list("product_name", flat=True))
+    items_stock = set(StockItem.objects.values_list("name", flat=True))
+    all_items = sorted([i for i in (items_challan | items_stock) if i])
+    return {
+        "existing_clients": clients,
+        "existing_items": all_items,
+    }

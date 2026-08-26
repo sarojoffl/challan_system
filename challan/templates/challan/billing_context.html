@@ -1,4 +1,5 @@
 {% extends "challan/base.html" %}
+{% load nepali_date_tags %}
 {% block title %}Billing Context — Challan System{% endblock %}
 {% block page_title %}Billing Context{% endblock %}
 {% block content %}
@@ -102,7 +103,7 @@
                 </td>
                 <td>{{ challan.client.name }}</td>
                 <td><span class="stamp neutral" style="font-size:0.72rem;">{{ challan.get_challan_type_display }}</span></td>
-                <td>{{ challan.created_at|date:"d M Y" }}</td>
+                <td>{{ challan.created_at|date:"d M Y" }} <span class="bs-date">({{ challan.created_at|bs_date }})</span></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -144,5 +145,6 @@
     });
   }
 </script>
+
 
 {% endblock %}
