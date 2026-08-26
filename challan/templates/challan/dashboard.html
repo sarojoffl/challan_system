@@ -172,7 +172,7 @@
           <td>
             {% for item in c.items.all %}
               <span style="display: inline-block; background: rgba(240, 244, 248, 0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; margin: 1px 2px 1px 0;">
-                {{ item.product_name }} <strong>(x{{ item.quantity }})</strong>
+                {{ item.product_name }} <strong>(x{{ item.quantity }} {{ item.unit|default:"pcs" }})</strong>
               </span>
             {% empty %}
               <span class="text-muted" style="font-size: 0.8rem;">—</span>

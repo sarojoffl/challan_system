@@ -257,12 +257,24 @@ class Challan(models.Model):
 
 
 class ChallanItem(models.Model):
+    UNIT_CHOICES = [
+        ("pcs", "pcs"),
+        ("roll", "roll"),
+        ("set", "set"),
+        ("pkt", "pkt"),
+        ("meter", "meter"),
+        ("box", "box"),
+        ("kg", "kg"),
+        ("bundle", "bundle"),
+        ("pair", "pair"),
+    ]
     challan = models.ForeignKey(
         Challan, on_delete=models.CASCADE, related_name="items"
     )
     serial_number = models.PositiveIntegerField("S.N.")
     product_name = models.CharField("Item / Goods detail", max_length=255)
     quantity = models.PositiveIntegerField("Qty")
+    unit = models.CharField("Unit", max_length=20, default="pcs", choices=UNIT_CHOICES, blank=True)
     actual_qty = models.PositiveIntegerField(
         "Actual Qty", null=True, blank=True,
         help_text="Quantity actually received/confirmed by client (only for adjustments)"
@@ -283,7 +295,8 @@ class ChallanItem(models.Model):
         ordering = ["serial_number"]
 
     def __str__(self):
-        return f"{self.serial_number}. {self.product_name} x{self.quantity}"
+        u = self.unit or "pcs"
+        return f"{self.serial_number}. {self.product_name} x{self.quantity} {u}"
 
 
 class Billing(models.Model):
@@ -323,6 +336,7 @@ class StockItem(models.Model):
     model = models.CharField(max_length=255, blank=True)
     serial_number = models.CharField(max_length=255, blank=True)
     is_disposable = models.BooleanField(default=False)
+    unit = models.CharField("Unit", max_length=20, default="pcs", choices=ChallanItem.UNIT_CHOICES, blank=True)
     quantity_available = models.IntegerField(default=0)
 
     class Meta:

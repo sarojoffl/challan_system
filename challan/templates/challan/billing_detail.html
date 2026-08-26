@@ -80,11 +80,11 @@
         </tr>
       </thead>
       <tbody>
-        {% for name, qty in consolidated_items %}
+        {% for name, qty, unit in consolidated_items %}
         <tr>
           <td>{{ forloop.counter }}</td>
           <td><strong>{{ name }}</strong></td>
-          <td>{{ qty }}</td>
+          <td>{{ qty }} {{ unit }}</td>
         </tr>
         {% empty %}
         <tr>

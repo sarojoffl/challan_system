@@ -119,6 +119,11 @@
                   {{ item_form.quantity }}
                   {{ item_form.quantity.errors }}
                 </div>
+                <div class="form-group" style="flex: 0 0 85px;">
+                  <label>Unit</label>
+                  {{ item_form.unit }}
+                  {{ item_form.unit.errors }}
+                </div>
                 <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
                   <label>Actual Qty</label>
                   {{ item_form.actual_qty }}
@@ -182,6 +187,20 @@
     <div class="form-group" style="flex: 0 0 80px;">
       <label>Qty</label>
       <input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" min="1" required>
+    </div>
+    <div class="form-group" style="flex: 0 0 85px;">
+      <label>Unit</label>
+      <select name="items-__prefix__-unit" id="id_items-__prefix__-unit" class="form-control">
+        <option value="pcs" selected>pcs</option>
+        <option value="roll">roll</option>
+        <option value="set">set</option>
+        <option value="pkt">pkt</option>
+        <option value="meter">meter</option>
+        <option value="box">box</option>
+        <option value="kg">kg</option>
+        <option value="bundle">bundle</option>
+        <option value="pair">pair</option>
+      </select>
     </div>
     <div class="form-group adjust-qty-col" style="flex: 0 0 105px; display: none;">
       <label>Actual Qty</label>
@@ -429,7 +448,7 @@ function updateGoodsDetailInputs() {
       let optionsHtml = '<option value="">— Select Stock Item —</option>';
       window.currentStockItems.forEach(item => {
         const selected = (itemInput.value === item.product_name) ? 'selected' : '';
-        optionsHtml += `<option value="${item.product_name}" data-qty="${item.available_qty}" ${selected}>${item.product_name} (${item.brand || 'General'}) — ${item.available_qty} avail</option>`;
+        optionsHtml += `<option value="${item.product_name}" data-qty="${item.available_qty}" data-unit="${item.unit || 'pcs'}" ${selected}>${item.product_name} (${item.brand || 'General'}) — ${item.available_qty} ${item.unit || 'pcs'} avail</option>`;
       });
       selectElem.innerHTML = optionsHtml;
 
@@ -437,6 +456,8 @@ function updateGoodsDetailInputs() {
         itemInput.value = this.value;
         const selectedOpt = this.options[this.selectedIndex];
         if (selectedOpt && selectedOpt.dataset.qty) {
+          const unitSelect = row.querySelector('select[name$="-unit"]');
+          if (unitSelect && selectedOpt.dataset.unit) { unitSelect.value = selectedOpt.dataset.unit; }
           if (qtyInput) {
             qtyInput.max = selectedOpt.dataset.qty;
             if (!qtyInput.value || parseInt(qtyInput.value) <= 0) {
@@ -475,7 +496,7 @@ function fetchEmployeeStock(empName) {
       if (window.currentStockItems.length > 0) {
         let html = '<div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:10px; margin-top:6px;"><strong>Available Stock for ' + empName + ':</strong><ul style="margin: 4px 0 0 18px; padding:0;">';
         window.currentStockItems.forEach(item => {
-          html += '<li><strong>' + item.product_name + '</strong> (' + (item.brand || 'General') + ') — <span class="badge badge-success">' + item.available_qty + ' units available</span></li>';
+          html += '<li><strong>' + item.product_name + '</strong> (' + (item.brand || 'General') + ') — <span class="badge badge-success">' + item.available_qty + ' ' + (item.unit || 'pcs') + ' available</span></li>';
         });
         html += '</ul></div>';
         stockInfoDiv.innerHTML = html;

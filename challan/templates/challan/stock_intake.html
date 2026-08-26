@@ -64,8 +64,13 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Intake Qty <span class="req">*</span></label>
-          <input type="number" name="item-starting_quantity" min="1" value="1" class="form-control" required>
+          <label>Intake Qty &amp; Unit <span class="req">*</span></label>
+          <div style="display: flex; gap: 8px;">
+            <input type="number" name="item-starting_quantity" min="1" value="1" class="form-control" style="flex: 1;" required>
+            <div style="width: 100px; flex: 0 0 100px;">
+              {{ item_form.unit }}
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>Intake Date</label>
@@ -160,7 +165,7 @@
             <td>{% if intake.stock_item.is_disposable %}Disposable{% else %}Non-disposable{% endif %}</td>
             <td>
               <span class="badge {% if intake.quantity > 0 %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 0.88rem;">
-                {{ intake.quantity }} units
+                {{ intake.quantity }} {{ intake.stock_item.unit|default:"pcs" }}
               </span>
             </td>
             <td>{{ intake.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ intake.created_at|bs_date }}</span></td>

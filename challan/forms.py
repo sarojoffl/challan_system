@@ -179,9 +179,10 @@ ChallanItemFormSet = inlineformset_factory(
     Challan,
     ChallanItem,
     formset=BaseChallanItemFormSet,
-    fields=["serial_number", "product_name", "quantity", "actual_qty", "stock_intake"],
+    fields=["serial_number", "product_name", "quantity", "unit", "actual_qty", "stock_intake"],
     widgets={
         "product_name": forms.TextInput(attrs={"list": "existing-items", "autocomplete": "off"}),
+        "unit": forms.Select(attrs={"class": "form-control"}),
     },
     extra=1,
     can_delete=True,
@@ -350,7 +351,7 @@ class BillingContextForm(forms.Form):
 class StockItemForm(BaseStyledForm):
     class Meta:
         model = StockItem
-        fields = ["name", "brand", "model", "serial_number", "is_disposable"]
+        fields = ["name", "brand", "model", "serial_number", "is_disposable", "unit"]
 
 
 class StockIntakeForm(BaseStyledForm):

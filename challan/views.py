@@ -149,20 +149,22 @@ def export_challan_csv(request, pk):
     if challan.adjust_requested:
         writer.writerow(["S.N.", "Item Name", "Quantity", "Actual Qty", "Adjusted Qty"])
         for item in challan.items.all():
+            u = item.unit or "pcs"
             writer.writerow([
                 item.serial_number,
                 item.product_name,
-                item.quantity,
-                item.actual_qty if item.actual_qty is not None else "",
-                item.adjusted_qty if item.adjusted_qty is not None else "",
+                f"{item.quantity} {u}",
+                f"{item.actual_qty} {u}" if item.actual_qty is not None else "",
+                f"{item.adjusted_qty} {u}" if item.adjusted_qty is not None else "",
             ])
     else:
         writer.writerow(["S.N.", "Item Name", "Quantity"])
         for item in challan.items.all():
+            u = item.unit or "pcs"
             writer.writerow([
                 item.serial_number,
                 item.product_name,
-                item.quantity,
+                f"{item.quantity} {u}",
             ])
 
     return response
@@ -752,6 +754,7 @@ def api_employee_stock_intakes(request):
             "brand": i.stock_item.brand,
             "model": i.stock_item.model,
             "available_qty": i.quantity,
+            "unit": i.stock_item.unit or "pcs",
         }
         for i in intakes
     ]
@@ -821,15 +824,17 @@ def billing_detail(request, pk):
     """View details of a specific billing transaction, consolidating goods across all linked challans."""
     billing = get_object_or_404(Billing, pk=pk)
     
-    # Consolidate items
+    # Consolidate items by name and unit
     consolidated = {}
     for challan in billing.challans.all():
         for item in challan.items.all():
-            name = item.product_name
-            consolidated[name] = consolidated.get(name, 0) + item.quantity
+            key = (item.product_name, item.unit or "pcs")
+            consolidated[key] = consolidated.get(key, 0) + item.quantity
             
     # Sort items alphabetically for clean UI presentation
-    sorted_items = sorted(consolidated.items())
+    sorted_items = sorted(
+        [(name, qty, unit) for (name, unit), qty in consolidated.items()]
+    )
 
     return render(
         request,
