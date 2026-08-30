@@ -179,9 +179,10 @@ ChallanItemFormSet = inlineformset_factory(
     Challan,
     ChallanItem,
     formset=BaseChallanItemFormSet,
-    fields=["serial_number", "product_name", "quantity", "unit", "actual_qty", "stock_intake"],
+    fields=["serial_number", "product_name", "item_serial_no", "quantity", "unit", "actual_qty", "stock_intake"],
     widgets={
         "product_name": forms.TextInput(attrs={"list": "existing-items", "autocomplete": "off"}),
+        "item_serial_no": forms.TextInput(attrs={"placeholder": "S/N (optional)", "autocomplete": "off"}),
         "unit": forms.Select(attrs={"class": "form-control"}),
     },
     extra=1,

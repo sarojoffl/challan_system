@@ -123,6 +123,11 @@
                   {{ item_form.product_name }}
                   {{ item_form.product_name.errors }}
                 </div>
+                <div class="form-group" style="flex: 0 0 130px;">
+                  <label>S/N (Optional)</label>
+                  {{ item_form.item_serial_no }}
+                  {{ item_form.item_serial_no.errors }}
+                </div>
                 <div class="form-group" style="flex: 0 0 80px;">
                   <label>Qty</label>
                   {{ item_form.quantity }}
@@ -173,6 +178,10 @@
     <div class="form-group" style="flex: 1 1 auto; min-width: 140px;">
       <label>Item</label>
       <input type="text" name="items-__prefix__-product_name" id="id_items-__prefix__-product_name" list="existing-items" autocomplete="off">
+    </div>
+    <div class="form-group" style="flex: 0 0 130px;">
+      <label>S/N (Optional)</label>
+      <input type="text" name="items-__prefix__-item_serial_no" id="id_items-__prefix__-item_serial_no" placeholder="S/N (optional)" autocomplete="off">
     </div>
     <div class="form-group" style="flex: 0 0 80px;">
       <label>Qty</label>

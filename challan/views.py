@@ -66,6 +66,7 @@ def challan_dashboard(request):
             | Q(delivered_by__icontains=query)
             | Q(received_by_name__icontains=query)
             | Q(items__product_name__icontains=query)
+            | Q(items__item_serial_no__icontains=query)
         ).distinct()
 
     counts = {
@@ -147,23 +148,25 @@ def export_challan_csv(request, pk):
     writer = csv.writer(response)
 
     if challan.adjust_requested:
-        writer.writerow(["S.N.", "Item Name", "Quantity", "Actual Qty", "Adjusted Qty"])
+        writer.writerow(["S.N.", "Item Name", "Serial No. (S/N)", "Quantity", "Actual Qty", "Adjusted Qty"])
         for item in challan.items.all():
             u = item.unit or "pcs"
             writer.writerow([
                 item.serial_number,
                 item.product_name,
+                item.item_serial_no or "",
                 f"{item.quantity} {u}",
                 f"{item.actual_qty} {u}" if item.actual_qty is not None else "",
                 f"{item.adjusted_qty} {u}" if item.adjusted_qty is not None else "",
             ])
     else:
-        writer.writerow(["S.N.", "Item Name", "Quantity"])
+        writer.writerow(["S.N.", "Item Name", "Serial No. (S/N)", "Quantity"])
         for item in challan.items.all():
             u = item.unit or "pcs"
             writer.writerow([
                 item.serial_number,
                 item.product_name,
+                item.item_serial_no or "",
                 f"{item.quantity} {u}",
             ])
 

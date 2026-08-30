@@ -252,6 +252,11 @@ class Challan(models.Model):
             return False
         return True
 
+    @property
+    def has_item_serials(self):
+        """Returns True if at least one item on this challan has an S/N."""
+        return any(bool(i.item_serial_no and i.item_serial_no.strip()) for i in self.items.all())
+
     def get_absolute_url(self):
         return reverse("challan:challan_detail", args=[self.pk])
 
@@ -273,6 +278,7 @@ class ChallanItem(models.Model):
     )
     serial_number = models.PositiveIntegerField("S.N.")
     product_name = models.CharField("Item / Goods detail", max_length=255)
+    item_serial_no = models.CharField("Serial No. (S/N)", max_length=255, blank=True)
     quantity = models.PositiveIntegerField("Qty")
     unit = models.CharField("Unit", max_length=20, default="pcs", choices=UNIT_CHOICES, blank=True)
     actual_qty = models.PositiveIntegerField(
