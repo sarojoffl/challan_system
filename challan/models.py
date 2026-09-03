@@ -309,6 +309,10 @@ class Billing(models.Model):
     """Billing Context: selecting a company + client, picking pending
     challans belonging to that client, and marking them billed out."""
 
+    class TadaStatus(models.TextChoices):
+        PENDING = "pending", "Pending (In TADA)"
+        COMPLETED = "completed", "TADA Out"
+
     company_name = models.ForeignKey(
         Company,
         on_delete=models.PROTECT,
@@ -325,6 +329,21 @@ class Billing(models.Model):
     challans = models.ManyToManyField(Challan, related_name="billing_entries")
     adjust_requested = models.BooleanField("Adjust", default=False)
     created_at = models.DateTimeField("Billing Date", default=timezone.now)
+
+    tada_status = models.CharField(
+        "TADA Status",
+        max_length=20,
+        choices=TadaStatus.choices,
+        default=TadaStatus.PENDING,
+    )
+    tada_completed_at = models.DateTimeField("TADA Out Date", null=True, blank=True)
+    tada_completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tada_outs_completed",
+    )
 
     class Meta:
         ordering = ["-created_at"]

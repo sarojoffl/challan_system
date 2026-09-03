@@ -1000,3 +1000,90 @@ def company_delete(request, pk):
         return redirect("challan:company_list")
 
     return render(request, "challan/company_confirm_delete.html", {"company": company})
+
+
+# ---------------------------------------------------------------------
+# Admin TADA Desk
+# ---------------------------------------------------------------------
+@login_required
+def tada_list(request):
+    """Admin TA/DA desk listing all billing records, completion status, and adjustment flags."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "Access to TA/DA Desk is restricted to Admin users.")
+        return redirect("challan:dashboard")
+
+    status_filter = request.GET.get("tada_status", "")
+    company_filter = request.GET.get("company", "")
+    client_filter = request.GET.get("client", "")
+    query = request.GET.get("q", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    billings = Billing.objects.select_related("client", "company_name", "tada_completed_by").prefetch_related("challans").all()
+
+    if status_filter:
+        billings = billings.filter(tada_status=status_filter)
+
+    if company_filter:
+        billings = billings.filter(company_name_id=company_filter)
+
+    if client_filter:
+        billings = billings.filter(client_id=client_filter)
+
+    if date_from:
+        billings = billings.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        billings = billings.filter(created_at__date__lte=date_to)
+
+    if query:
+        from django.db.models import Q
+        billings = billings.filter(
+            Q(client__name__icontains=query)
+            | Q(company_name__name__icontains=query)
+            | Q(company_name__code__icontains=query)
+            | Q(challans__challan_no__icontains=query)
+            | Q(bill_no__icontains=query)
+        ).distinct()
+
+    paginator = Paginator(billings, 10)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.page(1)
+
+    from .models import Client, Company
+    return render(
+        request,
+        "challan/tada_list.html",
+        {
+            "page_obj": page_obj,
+            "billings": page_obj.object_list,
+            "status_filter": status_filter,
+            "company_filter": company_filter,
+            "client_filter": client_filter,
+            "query": query,
+            "date_from": date_from,
+            "date_to": date_to,
+            "companies": Company.objects.all(),
+            "clients": Client.objects.all(),
+        },
+    )
+
+
+@login_required
+def mark_tada_out(request, pk):
+    """Mark a billing record as TA/DA Out (Completed) by Admin."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "Only Admin users can perform this action.")
+        return redirect("challan:dashboard")
+
+    if request.method == "POST":
+        billing = get_object_or_404(Billing, pk=pk)
+        billing.tada_status = Billing.TadaStatus.COMPLETED
+        billing.tada_completed_at = timezone.now()
+        billing.tada_completed_by = request.user
+        billing.save()
+        messages.success(request, f"Billing Record #{billing.pk} (Bill No: {billing.bill_no or '—'}) marked as TA/DA Out.")
+    return redirect("challan:tada_list")

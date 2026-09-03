@@ -29,6 +29,7 @@
         </a>
         <a class="nav-item {% if request.resolver_match.url_name == 'stock_intake' %}active{% endif %}" href="{% url 'challan:stock_intake' %}">Stock Intake</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'billing_history_list' or request.resolver_match.url_name == 'billing_detail' %}active{% endif %}" href="{% url 'challan:billing_history_list' %}">Billing History</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'tada_list' %}active{% endif %}" href="{% url 'challan:tada_list' %}">TA/DA Desk</a>
       {% else %}
         <!-- REGULAR USER NAVIGATION -->
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'challan:dashboard' %}">Dashboard</a>

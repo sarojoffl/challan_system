@@ -1,0 +1,174 @@
+{% extends "challan/base.html" %}
+{% load nepali_date_tags %}
+
+{% block title %}TA/DA Desk — Challan System{% endblock %}
+{% block page_title %}TA/DA Desk{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Accounts &amp; Admin Records</span>
+    <h2>TA/DA Desk Overview</h2>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-body">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+      
+      <div style="flex: 1 1 150px; min-width: 140px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">TA/DA Status</label>
+        <select name="tada_status" class="form-control" style="width: 100%;">
+          <option value="">All TA/DA Statuses</option>
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending (In TA/DA)</option>
+          <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>TA/DA Out (Completed)</option>
+        </select>
+      </div>
+
+      <div style="flex: 1 1 150px; min-width: 140px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Company Filter</label>
+        <select name="company" class="form-control" style="width: 100%;">
+          <option value="">All Companies</option>
+          {% for comp in companies %}
+          <option value="{{ comp.pk }}" {% if company_filter == comp.pk|stringformat:"i" %}selected{% endif %}>{{ comp.name }} ({{ comp.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="flex: 1 1 150px; min-width: 140px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Client Filter</label>
+        <select name="client" class="form-control" style="width: 100%;">
+          <option value="">All Clients</option>
+          {% for cl in clients %}
+          <option value="{{ cl.pk }}" {% if client_filter == cl.pk|stringformat:"i" %}selected{% endif %}>{{ cl.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="flex: 1 1 130px; min-width: 120px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Date From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control" style="width: 100%;">
+      </div>
+
+      <div style="flex: 1 1 130px; min-width: 120px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Date To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control" style="width: 100%;">
+      </div>
+
+      <div style="flex: 1 1 180px; min-width: 160px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Search Keyword</label>
+        <input type="text" name="q" value="{{ query }}" placeholder="Search client, bill no, challan..." class="form-control" style="width: 100%;">
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: flex-end;">
+        <button type="submit" class="btn btn-primary" style="height: 38px;">Filter</button>
+        {% if status_filter or company_filter or client_filter or date_from or date_to or query %}
+        <a href="{% url 'challan:tada_list' %}" class="btn btn-outline" style="height: 38px;">Reset</a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- TA/DA Data Table -->
+<div class="card">
+  <div class="card-header">
+    <h3>TA/DA Records ({{ page_obj.paginator.count }} total)</h3>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Record ID / Bill No.</th>
+          <th>Company Name</th>
+          <th>Client Name</th>
+          <th>Linked Challan(s)</th>
+          <th>Adjust?</th>
+          <th>Billed Date</th>
+          <th>TA/DA Status</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in billings %}
+        <tr>
+          <td>
+            <a href="{% url 'challan:billing_detail' b.pk %}" style="font-weight: 700; text-decoration: underline; color: var(--color-brand-600);">
+              #{{ b.pk }} {% if b.bill_no %}({{ b.bill_no }}){% endif %}
+            </a>
+          </td>
+          <td><strong>{{ b.company_name|default:"—" }}</strong></td>
+          <td>{{ b.client.name }}</td>
+          <td>
+            {% for c in b.challans.all %}
+              <a href="{% url 'challan:challan_detail' c.pk %}" class="stamp neutral" style="margin-right:2px; text-decoration:underline;">{{ c.challan_no }}</a>
+            {% empty %}
+              —
+            {% endfor %}
+          </td>
+          <td>
+            {% if b.adjust_requested %}
+              <span class="stamp warn">YES</span>
+            {% else %}
+              <span class="stamp neutral">NO</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ b.created_at|date:"d M Y, H:i" }}<br>
+            <span class="bs-date">{{ b.created_at|bs_date }}</span>
+          </td>
+          <td>
+            {% if b.tada_status == 'completed' %}
+              <span class="stamp approved">TA/DA Out</span>
+              {% if b.tada_completed_at %}
+                <br><span style="font-size:0.75rem; color:var(--color-ink-muted);">By {{ b.tada_completed_by.get_username|default:"Admin" }} on {{ b.tada_completed_at|date:"d M Y" }}</span>
+              {% endif %}
+            {% else %}
+              <span class="stamp pending">Pending (In TA/DA)</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            {% if b.tada_status != 'completed' %}
+              {% if user.is_staff or user.is_superuser %}
+              <form method="post" action="{% url 'challan:mark_tada_out' b.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Mark Billing Record #{{ b.pk }} as TA/DA Out?');">
+                  Mark TA/DA Out
+                </button>
+              </form>
+              {% else %}
+              <span class="text-muted" style="font-size:0.8rem;">Pending Admin</span>
+              {% endif %}
+            {% else %}
+              <span class="stamp neutral" style="font-size:0.8rem;">Completed</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">No TA/DA billing records found.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div style="margin-top: 20px; display: flex; justify-content: center; gap: 8px;">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&tada_status={{ status_filter }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if query %}&q={{ query }}{% endif %}" class="btn btn-outline btn-sm">← Previous</a>
+  {% endif %}
+  <span style="align-self: center; font-size: 0.9rem; font-weight: 600;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&tada_status={{ status_filter }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if query %}&q={{ query }}{% endif %}" class="btn btn-outline btn-sm">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

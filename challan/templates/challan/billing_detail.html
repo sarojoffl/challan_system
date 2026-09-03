@@ -10,7 +10,7 @@
     <h2>Billing Receipt #{{ billing.pk }}</h2>
   </div>
   <div class="btn-row">
-    <a class="btn btn-outline" href="{% url 'challan:billing_history_list' %}">← Back to History</a>
+    <button type="button" class="btn btn-outline" onclick="if (document.referrer) { history.back(); } else { window.location.href='{% url \'challan:billing_history_list\' %}'; }">← Back</button>
   </div>
 </div>
 
