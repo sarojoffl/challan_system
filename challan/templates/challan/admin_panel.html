@@ -70,7 +70,7 @@
               </ul>
             </td>
             <td style="font-size: 0.85rem; max-width: 220px;">{{ c.adjust_reason|default:"—" }}</td>
-            <td>{{ c.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
+            <td>{{ c.created_at|date:"d M Y" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
             <td style="text-align: right;">
               <form method="post" style="display: inline;">
                 {% csrf_token %}

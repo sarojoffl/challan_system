@@ -9,7 +9,7 @@
     <div class="notice warn" style="margin-bottom:20px;">
       <strong>One-time extension only.</strong> This challan is overdue (past its 3-day window).
       Extending will keep it active until <strong>day 7</strong> — i.e., locked at
-      <strong>{{ challan.overdue_lock_deadline|date:"d M Y, H:i" }} ({{ challan.overdue_lock_deadline|bs_date }})</strong>. A reason is required.
+      <strong>{{ challan.overdue_lock_deadline|date:"d M Y" }} ({{ challan.overdue_lock_deadline|bs_date }})</strong>. A reason is required.
       No further extension will be possible after this.
     </div>
     <form method="post">

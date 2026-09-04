@@ -66,7 +66,11 @@
         </div>
         <div class="form-group">
           <label>{{ form.bill_no.label }} <span class="req">*</span></label>
-          {{ form.bill_no }}
+          <input type="hidden" name="bill_no" id="id_bill_no" value="{{ form.bill_no.value|default:'' }}">
+          <div class="input-group">
+            <span class="input-prefix" id="bill-prefix"></span>
+            <input type="text" id="bill-seq-input" class="form-control" placeholder="Number" autocomplete="off">
+          </div>
           {{ form.bill_no.errors }}
           <span style="font-size:0.78rem;color:var(--color-ink-muted);">Bill / invoice number</span>
         </div>
@@ -96,7 +100,7 @@
                 <td><input type="checkbox" name="challans" value="{{ challan.pk }}" class="challan-cb"></td>
                 <td>
                   <a href="{% url 'challan:challan_detail' challan.pk %}?popup=1"
-                     onclick="window.open(this.href,'challan_popup','width=850,height=700,scrollbars=yes');return false;"
+                     onclick="openInpageModal(this.href, '{{ challan.challan_no|escapejs }}'); return false;"
                      class="job-num" style="text-decoration:underline;">
                     {{ challan.challan_no }}
                   </a>
@@ -144,7 +148,92 @@
       });
     });
   }
+
+  // Company Code prefix badge sync for Bill No.
+  (function() {
+    const companySelect = document.getElementById('id_company_name');
+    const prefixEl = document.getElementById('bill-prefix');
+    const seqInput = document.getElementById('bill-seq-input');
+    const hiddenBillNo = document.getElementById('id_bill_no');
+
+    if (!companySelect || !prefixEl || !seqInput || !hiddenBillNo) return;
+
+    function syncBillNo() {
+      const prefix = prefixEl.textContent || '';
+      const seq = seqInput.value.trim();
+      hiddenBillNo.value = (prefix && seq) ? prefix + seq : seq;
+    }
+
+    function updatePrefix(companyId) {
+      if (!companyId) {
+        prefixEl.textContent = '';
+        syncBillNo();
+        return;
+      }
+      fetch(`/api/next-challan-number/?company_id=${companyId}`)
+        .then(res => res.json())
+        .then(data => {
+          prefixEl.textContent = data.prefix || '';
+          syncBillNo();
+        });
+    }
+
+    // Parse existing bill_no on page load
+    const existing = hiddenBillNo.value;
+    if (existing) {
+      const dashIdx = existing.lastIndexOf('-');
+      if (dashIdx > 0) {
+        prefixEl.textContent = existing.substring(0, dashIdx + 1);
+        seqInput.value = existing.substring(dashIdx + 1);
+      } else {
+        seqInput.value = existing;
+      }
+    }
+
+    seqInput.addEventListener('input', syncBillNo);
+
+    companySelect.addEventListener('change', function() {
+      updatePrefix(this.value);
+    });
+
+  })();
 </script>
 
+<!-- In-Page Glassmorphism Modal Backdrop -->
+<div id="inpageModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:12px; max-width:900px; width:100%; height:88vh; display:flex; flex-direction:column; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.04); overflow:hidden;">
+    <div style="padding:14px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+      <h3 style="margin:0; font-size:1.05rem; color:#1e293b;" id="modalTitle">Challan Details</h3>
+      <button type="button" onclick="closeInpageModal()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#64748b; font-weight:bold; line-height:1;">✕</button>
+    </div>
+    <div style="flex:1; width:100%; height:100%; overflow:hidden;">
+      <iframe id="modalIframe" src="" style="width:100%; height:100%; border:none;"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openInpageModal(url, challanNo) {
+    const modal = document.getElementById('inpageModal');
+    const iframe = document.getElementById('modalIframe');
+    const title = document.getElementById('modalTitle');
+    iframe.src = url;
+    title.textContent = 'Challan ' + challanNo;
+    modal.style.display = 'flex';
+  }
+
+  function closeInpageModal() {
+    const modal = document.getElementById('inpageModal');
+    const iframe = document.getElementById('modalIframe');
+    iframe.src = '';
+    modal.style.display = 'none';
+  }
+
+  document.getElementById('inpageModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeInpageModal();
+    }
+  });
+</script>
 
 {% endblock %}

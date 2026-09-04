@@ -43,7 +43,7 @@
       <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-ink-muted); margin-bottom: 4px; display: block;">Date To</label>
       <input type="date" name="date_to" value="{{ date_to }}" class="form-control" style="width: 100%;">
     </div>
-    <div style="display: flex; gap: 8px; margin-bottom: 22px;">
+    <div style="display: flex; gap: 8px;">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if query or company_filter or client_filter or date_from or date_to %}
         <a href="{% url 'challan:billing_history_list' %}" class="btn btn-outline">Reset</a>
@@ -88,7 +88,7 @@
               {% endfor %}
             </div>
           </td>
-          <td>{{ billing.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ billing.created_at|bs_date }}</span></td>
+          <td>{{ billing.created_at|date:"d M Y" }}<br><span class="bs-date">{{ billing.created_at|bs_date }}</span></td>
           <td>
             {% if billing.adjust_requested %}
               <span class="stamp warn" style="font-size:0.72rem;">Yes</span>

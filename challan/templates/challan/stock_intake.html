@@ -168,8 +168,8 @@
                 {{ intake.quantity }} {{ intake.stock_item.unit|default:"pcs" }}
               </span>
             </td>
-            <td>{{ intake.created_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ intake.created_at|bs_date }}</span></td>
-            <td>{{ intake.updated_at|date:"d M Y, H:i" }}<br><span class="bs-date">{{ intake.updated_at|bs_date }}</span></td>
+            <td>{{ intake.created_at|date:"d M Y" }}<br><span class="bs-date">{{ intake.created_at|bs_date }}</span></td>
+            <td>{{ intake.updated_at|date:"d M Y" }}<br><span class="bs-date">{{ intake.updated_at|bs_date }}</span></td>
             {% if not user.is_staff and not user.is_superuser %}
             <td style="text-align: right;">
               {% if intake.quantity > 0 %}

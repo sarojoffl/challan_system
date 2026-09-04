@@ -1,6 +1,7 @@
 import csv
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import models, transaction
 from django.db.models import F, Q
@@ -109,6 +110,7 @@ def challan_dashboard(request):
 
 
 @login_required
+@xframe_options_sameorigin
 def challan_detail(request, pk):
     challan = get_object_or_404(
         Challan.objects.select_related("client", "billed_company"), pk=pk

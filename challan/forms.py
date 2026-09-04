@@ -64,9 +64,9 @@ class ChallanInitiationForm(BaseStyledForm):
             "adjust_reason": forms.Textarea(
                 attrs={"rows": 2, "placeholder": "Specify what was adjusted or replaced..."}
             ),
-            "created_at": forms.DateTimeInput(
-                format="%Y-%m-%dT%H:%M",
-                attrs={"type": "datetime-local", "class": "form-control"}
+            "created_at": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date", "class": "form-control"}
             ),
         }
         labels = {
@@ -89,9 +89,9 @@ class ChallanInitiationForm(BaseStyledForm):
             if self.instance.is_quotation_based is not None:
                 self.initial["is_quotation_based"] = str(self.instance.is_quotation_based)
             if self.instance.created_at:
-                self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%dT%H:%M")
+                self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%d")
         if not self.initial.get("created_at"):
-            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%d")
 
     def clean_is_quotation_based(self):
         val = self.cleaned_data.get("is_quotation_based")
@@ -218,9 +218,9 @@ class HandChallanForm(BaseStyledForm):
             "adjust_reason": forms.Textarea(
                 attrs={"rows": 2, "placeholder": "Specify what was adjusted or replaced..."}
             ),
-            "created_at": forms.DateTimeInput(
-                format="%Y-%m-%dT%H:%M",
-                attrs={"type": "datetime-local", "class": "form-control"}
+            "created_at": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date", "class": "form-control"}
             ),
         }
         labels = {
@@ -238,9 +238,9 @@ class HandChallanForm(BaseStyledForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk and self.instance.created_at:
-            self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%dT%H:%M")
+            self.initial["created_at"] = timezone.localtime(self.instance.created_at).strftime("%Y-%m-%d")
         if not self.initial.get("created_at"):
-            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%d")
 
     def clean(self):
         cleaned = super().clean()
@@ -302,12 +302,12 @@ class BillingContextForm(forms.Form):
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "e.g. BILL-2026-001"}),
     )
-    created_at = forms.DateTimeField(
+    created_at = forms.DateField(
         label="Billing Date",
         required=False,
-        widget=forms.DateTimeInput(
-            format="%Y-%m-%dT%H:%M",
-            attrs={"type": "datetime-local", "class": "form-control"}
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={"type": "date", "class": "form-control"}
         ),
     )
     challans = forms.ModelMultipleChoiceField(
@@ -323,7 +323,7 @@ class BillingContextForm(forms.Form):
         end_date = kwargs.pop("end_date", None)
         super().__init__(*args, **kwargs)
         if not self.initial.get("created_at"):
-            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%d")
         qs = (
             Challan.objects.filter(status=Challan.Status.APPROVED, is_billed_out=False)
             .select_related("client")
@@ -366,16 +366,16 @@ class StockIntakeForm(BaseStyledForm):
             "created_at": "Intake Date",
         }
         widgets = {
-            "created_at": forms.DateTimeInput(
-                format="%Y-%m-%dT%H:%M",
-                attrs={"type": "datetime-local", "class": "form-control"}
+            "created_at": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date", "class": "form-control"}
             ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.initial.get("created_at"):
-            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M")
+            self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%d")
 
 
 class StockDecreaseForm(forms.Form):
