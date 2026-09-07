@@ -293,7 +293,7 @@ class ChallanNoChangeForm(forms.Form):
 class BillingContextForm(forms.Form):
     company_name = forms.ModelChoiceField(
         queryset=Company.objects.all(),
-        label="Specific Company Name",
+        label="Billing Company Name",
         required=True,
     )
     bill_no = forms.CharField(
@@ -319,6 +319,7 @@ class BillingContextForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         client_id = kwargs.pop("client_id", None)
+        company_id = kwargs.pop("company_id", None)
         start_date = kwargs.pop("start_date", None)
         end_date = kwargs.pop("end_date", None)
         super().__init__(*args, **kwargs)
@@ -326,11 +327,13 @@ class BillingContextForm(forms.Form):
             self.initial["created_at"] = timezone.localtime(timezone.now()).strftime("%Y-%m-%d")
         qs = (
             Challan.objects.filter(status=Challan.Status.APPROVED, is_billed_out=False)
-            .select_related("client")
+            .select_related("client", "billed_company")
             .order_by("client__name", "-created_at")
         )
         if client_id:
             qs = qs.filter(client_id=client_id)
+        if company_id:
+            qs = qs.filter(billed_company_id=company_id)
         if start_date:
             qs = qs.filter(created_at__date__gte=start_date)
         if end_date:

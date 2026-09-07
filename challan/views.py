@@ -42,6 +42,8 @@ def challan_dashboard(request):
 
     if status_filter in dict(Challan.Status.choices):
         challans = challans.filter(status=status_filter)
+    elif status_filter == "billed":
+        challans = challans.filter(is_billed_out=True)
 
     if company_filter:
         challans = challans.filter(billed_company_id=company_filter)
@@ -74,6 +76,7 @@ def challan_dashboard(request):
         "all": Challan.objects.count(),
         "pending": Challan.objects.filter(status=Challan.Status.PENDING).count(),
         "approved": Challan.objects.filter(status=Challan.Status.APPROVED).count(),
+        "billed": Challan.objects.filter(is_billed_out=True).count(),
         "void": Challan.objects.filter(status=Challan.Status.VOID).count(),
     }
 
@@ -538,6 +541,7 @@ def hand_challan_form(request):
 @login_required
 def billing_context(request):
     client_id = request.GET.get("client") or None
+    company_id = request.GET.get("company") or None
     start_date = request.GET.get("start_date") or None
     end_date = request.GET.get("end_date") or None
 
@@ -545,6 +549,7 @@ def billing_context(request):
         form = BillingContextForm(
             request.POST,
             client_id=client_id,
+            company_id=company_id,
             start_date=start_date,
             end_date=end_date,
         )
@@ -593,17 +598,21 @@ def billing_context(request):
     else:
         form = BillingContextForm(
             client_id=client_id,
+            company_id=company_id,
             start_date=start_date,
             end_date=end_date,
         )
 
-    # Pass all clients for the optional filter dropdown
-    from .models import Client as ClientModel
+    # Pass all clients and companies for the optional filter dropdowns
+    from .models import Client as ClientModel, Company as CompanyModel
     clients = ClientModel.objects.all()
+    companies = CompanyModel.objects.all()
     return render(request, "challan/billing_context.html", {
         "form": form,
         "clients": clients,
+        "companies": companies,
         "selected_client_id": int(client_id) if client_id else None,
+        "selected_company_id": int(company_id) if company_id else None,
         "start_date": start_date or "",
         "end_date": end_date or "",
     })

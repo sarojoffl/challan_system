@@ -33,6 +33,10 @@
     <span class="stat-label">Approved</span>
     <span class="stat-value">{{ counts.approved }}</span>
   </a>
+  <a class="stat-card info" href="?status=billed">
+    <span class="stat-label">Billed</span>
+    <span class="stat-value">{{ counts.billed }}</span>
+  </a>
   <a class="stat-card danger" href="?status=void">
     <span class="stat-label">Void</span>
     <span class="stat-value">{{ counts.void }}</span>
@@ -40,13 +44,16 @@
 </div>
 
 {% if overdue_challans and not user.is_staff and not user.is_superuser %}
-<div class="card" style="margin-bottom: 24px; border: 1px solid rgba(217, 119, 6, 0.3); background: rgba(254, 243, 199, 0.25);">
+<div id="overdue-banner-card" class="card" style="margin-bottom: 24px; border: 1px solid rgba(217, 119, 6, 0.3); background: rgba(254, 243, 199, 0.25);">
   <div class="card-header" style="background: rgba(254, 243, 199, 0.55); display: flex; align-items: center; justify-content: space-between;">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 1.1rem;">⚠️</span>
       <h3 style="color: #92400e; margin: 0; font-size: 0.95rem; font-weight: 700;">Action Required: {{ overdue_challans|length }} Overdue Pending Challan(s)</h3>
     </div>
-    <span style="font-size: 0.78rem; color: #92400e; font-weight: 600;">Past {{ void_window_days }}-Day Window</span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 0.78rem; color: #92400e; font-weight: 600;">Past {{ void_window_days }}-Day Window</span>
+      <button type="button" onclick="document.getElementById('overdue-banner-card').style.display='none';" class="btn btn-outline btn-sm" style="background: #ffffff; border-color: rgba(217, 119, 6, 0.4); color: #92400e; font-weight: 600; padding: 2px 8px; font-size: 0.75rem;">✕ Hide</button>
+    </div>
   </div>
   <div class="card-body" style="padding: 0;">
     <div class="table-wrapper">
@@ -143,6 +150,7 @@
   <a class="filter-tab {% if status_filter == 'all' %}active{% endif %}" href="?status=all{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">All</a>
   <a class="filter-tab {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Pending</a>
   <a class="filter-tab {% if status_filter == 'approved' %}active{% endif %}" href="?status=approved{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Approved</a>
+  <a class="filter-tab {% if status_filter == 'billed' %}active{% endif %}" href="?status=billed{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Billed</a>
   <a class="filter-tab {% if status_filter == 'void' %}active{% endif %}" href="?status=void{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Void</a>
 </div>
 

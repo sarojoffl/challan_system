@@ -264,14 +264,17 @@ class Challan(models.Model):
 class ChallanItem(models.Model):
     UNIT_CHOICES = [
         ("pcs", "pcs"),
-        ("roll", "roll"),
-        ("set", "set"),
-        ("pkt", "pkt"),
-        ("meter", "meter"),
-        ("box", "box"),
-        ("kg", "kg"),
-        ("bundle", "bundle"),
         ("pair", "pair"),
+        ("set", "set"),
+        ("roll", "roll"),
+        ("bundle", "bundle"),
+        ("pkt", "pkt"),
+        ("box", "box"),
+        ("bag", "bag"),
+        ("meter", "meter"),
+        ("kg", "kg"),
+        ("ltr", "ltr"),
+        ("core", "core"),
     ]
     challan = models.ForeignKey(
         Challan, on_delete=models.CASCADE, related_name="items"

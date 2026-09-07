@@ -14,15 +14,24 @@
 <div class="card">
   <div class="card-body">
 
-    {# Filter Form (Client & Date Range) #}
+    {# Filter Form (Client, Billed Company & Date Range) #}
     <form method="get" style="margin-bottom:22px; background: rgba(240, 244, 248, 0.5); padding: 16px; border-radius: 8px;">
-      <div class="form-grid" style="grid-template-columns: 1.5fr 1fr 1fr auto; align-items: end; gap: 12px;">
+      <div class="form-grid" style="grid-template-columns: 1.2fr 1.2fr 1fr 1fr auto; align-items: end; gap: 12px;">
         <div class="form-group">
           <label>Filter by Client</label>
           <select name="client" class="form-control">
             <option value="">— All clients —</option>
             {% for c in clients %}
               <option value="{{ c.pk }}" {% if selected_client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Filter by Billed Company</label>
+          <select name="company" class="form-control">
+            <option value="">— All companies —</option>
+            {% for comp in companies %}
+              <option value="{{ comp.pk }}" {% if selected_company_id == comp.pk %}selected{% endif %}>{{ comp.name }} ({{ comp.code }})</option>
             {% endfor %}
           </select>
         </div>
@@ -36,7 +45,7 @@
         </div>
         <div style="display: flex; gap: 6px;">
           <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
-          {% if selected_client_id or start_date or end_date %}
+          {% if selected_client_id or selected_company_id or start_date or end_date %}
             <a href="{% url 'challan:billing_context' %}" class="btn btn-outline" style="padding: 8px 14px;">Clear</a>
           {% endif %}
         </div>
@@ -54,6 +63,7 @@
       {% csrf_token %}
       {# Pass filter params back so POST uses same queryset scope #}
       {% if selected_client_id %}<input type="hidden" name="client" value="{{ selected_client_id }}">{% endif %}
+      {% if selected_company_id %}<input type="hidden" name="company" value="{{ selected_company_id }}">{% endif %}
       {% if start_date %}<input type="hidden" name="start_date" value="{{ start_date }}">{% endif %}
       {% if end_date %}<input type="hidden" name="end_date" value="{{ end_date }}">{% endif %}
 
@@ -90,6 +100,7 @@
                 <th><input type="checkbox" id="select-all-challans" title="Select / Deselect all"></th>
                 <th>Challan No.</th>
                 <th>Client</th>
+                <th>Billed Company</th>
                 <th>Type</th>
                 <th>Created</th>
               </tr>
@@ -106,6 +117,13 @@
                   </a>
                 </td>
                 <td>{{ challan.client.name }}</td>
+                <td>
+                  {% if challan.billed_company %}
+                    <strong>{{ challan.billed_company.code }}</strong> <span style="font-size:0.8rem;color:var(--color-ink-muted);">({{ challan.billed_company.name }})</span>
+                  {% else %}
+                    <span style="color:var(--color-ink-muted);">Not set</span>
+                  {% endif %}
+                </td>
                 <td><span class="stamp neutral" style="font-size:0.72rem;">{{ challan.get_challan_type_display }}</span></td>
                 <td>{{ challan.created_at|date:"d M Y" }} <span class="bs-date">({{ challan.created_at|bs_date }})</span></td>
               </tr>
