@@ -21,23 +21,23 @@
 </div>
 
 <div class="stat-strip">
-  <a class="stat-card" href="?status=all">
+  <a class="stat-card" href="?status=all#challans-table">
     <span class="stat-label">All Challans</span>
     <span class="stat-value">{{ counts.all }}</span>
   </a>
-  <a class="stat-card amber" href="?status=pending">
+  <a class="stat-card amber" href="?status=pending#challans-table">
     <span class="stat-label">Pending</span>
     <span class="stat-value">{{ counts.pending }}</span>
   </a>
-  <a class="stat-card success" href="?status=approved">
+  <a class="stat-card success" href="?status=approved#challans-table">
     <span class="stat-label">Approved</span>
     <span class="stat-value">{{ counts.approved }}</span>
   </a>
-  <a class="stat-card info" href="?status=billed">
+  <a class="stat-card info" href="?status=billed#challans-table">
     <span class="stat-label">Billed</span>
     <span class="stat-value">{{ counts.billed }}</span>
   </a>
-  <a class="stat-card danger" href="?status=void">
+  <a class="stat-card danger" href="?status=void#challans-table">
     <span class="stat-label">Void</span>
     <span class="stat-value">{{ counts.void }}</span>
   </a>
@@ -146,89 +146,138 @@
   </div>
 </form>
 
-<div class="filter-tabs">
-  <a class="filter-tab {% if status_filter == 'all' %}active{% endif %}" href="?status=all{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">All</a>
-  <a class="filter-tab {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Pending</a>
-  <a class="filter-tab {% if status_filter == 'approved' %}active{% endif %}" href="?status=approved{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Approved</a>
-  <a class="filter-tab {% if status_filter == 'billed' %}active{% endif %}" href="?status=billed{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Billed</a>
-  <a class="filter-tab {% if status_filter == 'void' %}active{% endif %}" href="?status=void{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Void</a>
-</div>
-
-<div class="card">
-  <div class="card-header"><h3>Challans</h3></div>
-  <div class="table-responsive">
-    <table>
-      <thead>
-        <tr>
-          <th>Challan No.</th>
-          <th>Type</th>
-          <th>Client</th>
-          <th>Items</th>
-          <th>Quotation Based</th>
-          <th>Status</th>
-          <th>Adjust</th>
-          <th>Billed Out</th>
-          <th>Created</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in challans %}
-        <tr>
-          <td><a class="job-num" href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a></td>
-          <td>{{ c.get_challan_type_display }}</td>
-          <td>{{ c.client.name }}</td>
-          <td>
-            {% for item in c.items.all %}
-              <span style="display: inline-block; background: rgba(240, 244, 248, 0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; margin: 1px 2px 1px 0;">
-                {{ item.product_name }} <strong>(x{{ item.quantity }} {{ item.unit|default:"pcs" }})</strong>
-              </span>
-            {% empty %}
-              <span class="text-muted" style="font-size: 0.8rem;">—</span>
-            {% endfor %}
-          </td>
-          <td>{% if c.is_quotation_based %}Yes{% else %}No{% endif %}</td>
-          <td>
-            {% if c.status == 'pending' %}<span class="stamp pending">Pending</span>
-            {% elif c.status == 'approved' %}<span class="stamp approved">Approved</span>
-            {% else %}<span class="stamp void">Void</span>{% endif %}
-          </td>
-          <td>{% if c.adjust_requested %}<span class="stamp neutral">Yes</span>{% else %}—{% endif %}</td>
-          <td>{% if c.is_billed_out %}<span class="stamp approved">Billed</span>{% else %}—{% endif %}</td>
-          <td>{{ c.created_at|date:"d M Y" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8"><div class="empty-state"><strong>No challans yet</strong><p>Create one from the Initiation Form or Hand Challan.</p></div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div id="dashboard-table-area">
+  <div class="filter-tabs" id="challans-table">
+    <a class="filter-tab {% if status_filter == 'all' %}active{% endif %}" href="?status=all{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}#challans-table">All</a>
+    <a class="filter-tab {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}#challans-table">Pending</a>
+    <a class="filter-tab {% if status_filter == 'approved' %}active{% endif %}" href="?status=approved{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}#challans-table">Approved</a>
+    <a class="filter-tab {% if status_filter == 'billed' %}active{% endif %}" href="?status=billed{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}#challans-table">Billed</a>
+    <a class="filter-tab {% if status_filter == 'void' %}active{% endif %}" href="?status=void{% if query %}&q={{ query }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if client_filter %}&client={{ client_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}#challans-table">Void</a>
   </div>
-</div>
 
-{% if page_obj.has_other_pages %}
-<div class="pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 12px 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-  <div style="font-size: 0.85rem; color: var(--color-ink-muted);">
-    Showing Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} (Total {{ page_obj.paginator.count }} challan{% if page_obj.paginator.count != 1 %}s{% endif %})
+  <div class="card">
+    <div class="card-header"><h3>Challans</h3></div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Challan No.</th>
+            <th>Type</th>
+            <th>Client</th>
+            <th>Items</th>
+            <th>Quotation Based</th>
+            <th>Status</th>
+            <th>Adjust</th>
+            <th>Billed Out</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in challans %}
+          <tr>
+            <td><a class="job-num" href="{% url 'challan:challan_detail' c.pk %}">{{ c.challan_no }}</a></td>
+            <td>{{ c.get_challan_type_display }}</td>
+            <td>{{ c.client.name }}</td>
+            <td>
+              {% for item in c.items.all %}
+                <span style="display: inline-block; background: rgba(240, 244, 248, 0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; margin: 1px 2px 1px 0;">
+                  {{ item.product_name }} <strong>(x{{ item.quantity }} {{ item.unit|default:"pcs" }})</strong>
+                </span>
+              {% empty %}
+                <span class="text-muted" style="font-size: 0.8rem;">—</span>
+              {% endfor %}
+            </td>
+            <td>{% if c.is_quotation_based %}Yes{% else %}No{% endif %}</td>
+            <td>
+              {% if c.status == 'pending' %}<span class="stamp pending">Pending</span>
+              {% elif c.status == 'approved' %}<span class="stamp approved">Approved</span>
+              {% else %}<span class="stamp void">Void</span>{% endif %}
+            </td>
+            <td>{% if c.adjust_requested %}<span class="stamp neutral">Yes</span>{% else %}—{% endif %}</td>
+            <td>{% if c.is_billed_out %}<span class="stamp approved">Billed</span>{% else %}—{% endif %}</td>
+            <td>{{ c.created_at|date:"d M Y" }}<br><span class="bs-date">{{ c.created_at|bs_date }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9"><div class="empty-state"><strong>No challans yet</strong><p>Create one from the Initiation Form or Hand Challan.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div style="display: flex; gap: 6px;">
-    {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">&laquo; Previous</a>
-    {% else %}
-      <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;">&laquo; Previous</button>
-    {% endif %}
 
-    {% for i in page_obj.paginator.page_range %}
-      {% if page_obj.number == i %}
-        <span class="btn btn-primary btn-sm" style="pointer-events:none;">{{ i }}</span>
-      {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-        <a href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">{{ i }}</a>
+  {% if page_obj.has_other_pages %}
+  <div class="pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 12px 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="font-size: 0.85rem; color: var(--color-ink-muted);">
+      Showing Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} (Total {{ page_obj.paginator.count }} challan{% if page_obj.paginator.count != 1 %}s{% endif %})
+    </div>
+    <div style="display: flex; gap: 6px;">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">&laquo; Previous</a>
+      {% else %}
+        <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;">&laquo; Previous</button>
       {% endif %}
-    {% endfor %}
 
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">Next &raquo;</a>
-    {% else %}
-      <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;">Next &raquo;</button>
-    {% endif %}
+      {% for i in page_obj.paginator.page_range %}
+        {% if page_obj.number == i %}
+          <span class="btn btn-primary btn-sm" style="pointer-events:none;">{{ i }}</span>
+        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+          <a href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">{{ i }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn btn-outline btn-sm">Next &raquo;</a>
+      {% else %}
+        <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;">Next &raquo;</button>
+      {% endif %}
+    </div>
   </div>
+  {% endif %}
 </div>
-{% endif %}{% endblock %}
+
+<script>
+function fetchDashboardSection(url, scroll) {
+  var area = document.getElementById('dashboard-table-area');
+  if (!area) return;
+  area.style.opacity = '0.4';
+  area.style.transition = 'opacity 0.15s ease';
+
+  fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(res) { return res.text(); })
+    .then(function(html) {
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(html, 'text/html');
+      var newArea = doc.getElementById('dashboard-table-area');
+      var newStatStrip = doc.querySelector('.stat-strip');
+      if (newArea) {
+        area.innerHTML = newArea.innerHTML;
+        area.style.opacity = '1';
+      }
+      if (newStatStrip) {
+        var currentStatStrip = document.querySelector('.stat-strip');
+        if (currentStatStrip) currentStatStrip.innerHTML = newStatStrip.innerHTML;
+      }
+      window.history.pushState({}, '', url);
+      if (scroll) {
+        var target = document.getElementById('challans-table');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    })
+    .catch(function() {
+      window.location.href = url;
+    });
+}
+
+document.addEventListener('click', function(e) {
+  var link = e.target.closest('.stat-card, .filter-tab, .pagination a');
+  if (link && link.href) {
+    e.preventDefault();
+    fetchDashboardSection(link.href, true);
+  }
+});
+
+window.addEventListener('popstate', function() {
+  fetchDashboardSection(window.location.href, false);
+});
+</script>
+{% endblock %}
