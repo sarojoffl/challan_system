@@ -40,7 +40,7 @@ class Client(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return str(self.name or "")
 
 
 class Challan(models.Model):
@@ -67,7 +67,7 @@ class Challan(models.Model):
         related_name="challans",
         null=True,
         blank=True,
-        verbose_name="Billed Company (or Firm)"
+        verbose_name="Company (or Firm)"
     )
 
     client = models.ForeignKey(
@@ -169,6 +169,18 @@ class Challan(models.Model):
     # ------------------------------------------------------------------
 
     @property
+    def is_backdated(self):
+        """True if the document date (created_at) was entered past its initial 3-day window."""
+        ref_time = self.updated_at or timezone.now()
+        return (ref_time - self.created_at) > datetime.timedelta(days=VOID_WINDOW_DAYS)
+
+    @property
+    def backdated_grace_deadline(self):
+        """24-hour grace period from system entry/update time (updated_at) for backdated entries."""
+        ref_time = self.updated_at or timezone.now()
+        return ref_time + datetime.timedelta(hours=24)
+
+    @property
     def initial_deadline(self):
         """The original 3-day active window."""
         return self.created_at + datetime.timedelta(days=VOID_WINDOW_DAYS)
@@ -192,6 +204,8 @@ class Challan(models.Model):
         """The effective latest active deadline (used in templates)."""
         if self.extension_deadline:
             return self.extension_deadline
+        if self.is_backdated:
+            return self.backdated_grace_deadline
         return self.initial_deadline
 
     @property
@@ -200,7 +214,7 @@ class Challan(models.Model):
         - Cannot be voided if already VOID.
         - Cannot be voided if already BILLED OUT.
         - Approved challans can request void (goes to Admin approval).
-        - Pending challans allowed within active window or if admin-unlocked.
+        - Pending challans allowed within active window (or 24h grace for backdated entries) or if admin-unlocked.
         """
         if self.status == self.Status.VOID or self.is_billed_out:
             return False
@@ -209,6 +223,8 @@ class Challan(models.Model):
         if self.unlocked_by_admin:
             return True
         now = timezone.now()
+        if self.is_backdated:
+            return now <= self.backdated_grace_deadline
         if now <= self.initial_deadline:
             return True
         if self.extension_deadline and now <= self.extension_deadline:
@@ -220,11 +236,14 @@ class Challan(models.Model):
         """True only when:
         - still pending
         - past the initial 3-day window (overdue)
+        - not backdated (backdated entries use 24h grace instead of 3-7 day extension)
         - within the 7-day lock deadline
         - not yet extended (one-time only)
         - not admin-unlocked
         """
         if self.status != self.Status.PENDING:
+            return False
+        if self.is_backdated:
             return False
         if self.extension_days > 0:   # already extended once
             return False
@@ -235,15 +254,16 @@ class Challan(models.Model):
 
     @property
     def is_overdue_for_reminder(self):
-        """Pending challan past its initial 3-day window — show the overdue banner."""
+        """Pending challan past its initial 3-day window — show the overdue banner (only if not backdated grace active)."""
         if self.status != self.Status.PENDING:
+            return False
+        if self.is_backdated:
             return False
         return timezone.now() > self.initial_deadline
 
     @property
     def is_locked_out(self):
-        """Truly locked: past day 7 without extension, or extension expired,
-        and not admin-unlocked."""
+        """Truly locked: past deadline (or past 24h grace for backdated entries), and not admin-unlocked."""
         if self.status != self.Status.PENDING:
             return False
         if self.unlocked_by_admin:
@@ -305,7 +325,10 @@ class ChallanItem(models.Model):
 
     def __str__(self):
         u = self.unit or "pcs"
-        return f"{self.serial_number}. {self.product_name} x{self.quantity} {u}"
+        p = self.product_name or "Item"
+        s = f"{self.serial_number}. " if self.serial_number else ""
+        q = self.quantity if self.quantity is not None else 0
+        return f"{s}{p} x{q} {u}"
 
 
 class Billing(models.Model):
@@ -353,7 +376,8 @@ class Billing(models.Model):
         verbose_name_plural = "Billings"
 
     def __str__(self):
-        return f"Billing #{self.pk} — {self.client}"
+        client_name = self.client.name if getattr(self, 'client_id', None) else ""
+        return f"Billing #{self.pk or ''} — {client_name}".strip()
 
 
 class StockItem(models.Model):
@@ -371,10 +395,8 @@ class StockItem(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        bits = [self.name]
-        if self.brand:
-            bits.append(self.brand)
-        return " - ".join(bits)
+        bits = [b for b in [self.name, self.brand] if b]
+        return " - ".join(bits) or "Stock Item"
 
 
 class StockIntake(models.Model):
@@ -407,4 +429,5 @@ class StockIntake(models.Model):
             )
 
     def __str__(self):
-        return f"{self.employee_name} — {self.stock_item} (+{self.quantity})"
+        item_str = self.stock_item if getattr(self, 'stock_item_id', None) else ""
+        return f"{self.employee_name or ''} — {item_str} (+{self.quantity or 0})".strip()

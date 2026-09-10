@@ -70,7 +70,7 @@ class ChallanInitiationForm(BaseStyledForm):
             ),
         }
         labels = {
-            "billed_company": "Billed Company (or Firm)",
+            "billed_company": "Company (or Firm)",
             "challan_no": "Challan No.",
             "contact_name": "Name",
             "received_by_name": "Received By — Name",

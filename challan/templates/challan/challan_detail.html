@@ -10,6 +10,7 @@
     <h2>{{ challan.challan_no }}</h2>
   </div>
   <div class="btn-row">
+    <button type="button" class="btn btn-outline" onclick="if (document.referrer) { history.back(); } else { window.location.href='{% url 'challan:dashboard' %}'; }">← Back</button>
     <a class="btn btn-outline" href="{% url 'challan:export_challan_csv' challan.pk %}">📥 Export CSV</a>
     {% if user.is_staff or user.is_superuser %}
       <!-- ADMIN CONTROLS: Admin acts via notice banners below for Void, Adjustments & Unlocks -->
@@ -92,6 +93,10 @@
       </form>
     {% endif %}
   </div>
+  {% elif challan.is_backdated and challan.can_void %}
+  <div class="notice info">
+    <strong>⏱ Backdated Entry (24h Grace Period)</strong> — Active until <strong>{{ challan.backdated_grace_deadline|date:"d M Y" }} ({{ challan.backdated_grace_deadline|bs_date }})</strong> for initial edits/corrections before permanent lock.
+  </div>
   {% elif challan.can_extend %}
   <div class="notice warn">
     <strong>⚠ Overdue</strong> — Past the 3-day window. You can extend once (until day 7) but you must provide a reason.
@@ -116,7 +121,7 @@
           {% else %}<span class="stamp void">Void</span>{% endif %}
         </span>
       </div>
-      <div class="ticket-field"><span class="tf-label">Billed Company</span><span class="tf-value {% if not challan.billed_company %}empty{% endif %}">{{ challan.billed_company|default:"Not set" }}</span></div>
+      <div class="ticket-field"><span class="tf-label">Company (or Firm)</span><span class="tf-value {% if not challan.billed_company %}empty{% endif %}">{{ challan.billed_company|default:"Not set" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Client's Name</span><span class="tf-value">{{ challan.client.name }}</span></div>
       <div class="ticket-field"><span class="tf-label">Contact Person</span><span class="tf-value {% if not challan.contact_name %}empty{% endif %}">{{ challan.contact_name|default:"—" }}</span></div>
       <div class="ticket-field"><span class="tf-label">Quotation Based</span><span class="tf-value">{% if challan.is_quotation_based %}Yes{% else %}No{% endif %}</span></div>
