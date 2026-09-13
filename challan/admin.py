@@ -33,7 +33,7 @@ class ChallanAdmin(admin.ModelAdmin):
     list_filter = ("status", "challan_type", "is_quotation_based", "is_billed_out")
     search_fields = ("challan_no", "billed_company", "client__name", "contact_name")
     inlines = [ChallanItemInline]
-    readonly_fields = ("challan_no", "created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Client)

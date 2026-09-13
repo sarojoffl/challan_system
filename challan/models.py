@@ -286,15 +286,18 @@ class ChallanItem(models.Model):
         ("pcs", "pcs"),
         ("pair", "pair"),
         ("set", "set"),
-        ("roll", "roll"),
-        ("bundle", "bundle"),
-        ("pkt", "pkt"),
         ("box", "box"),
+        ("pkt", "pkt"),
         ("bag", "bag"),
+        ("bundle", "bundle"),
+        ("roll", "roll"),
         ("meter", "meter"),
+        ("feet", "feet"),
         ("kg", "kg"),
         ("ltr", "ltr"),
         ("core", "core"),
+        ("lot", "lot"),
+        ("truck", "truck"),
     ]
     challan = models.ForeignKey(
         Challan, on_delete=models.CASCADE, related_name="items"
