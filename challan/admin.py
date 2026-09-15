@@ -30,8 +30,16 @@ class ChallanAdmin(admin.ModelAdmin):
         "locked",
         "created_at",
     )
-    list_filter = ("status", "challan_type", "is_quotation_based", "is_billed_out")
-    search_fields = ("challan_no", "billed_company", "client__name", "contact_name")
+    list_filter = ("status", "challan_type", "billed_company", "is_quotation_based", "is_billed_out")
+    search_fields = (
+        "challan_no",
+        "billed_company__name",
+        "billed_company__code",
+        "client__name",
+        "contact_name",
+        "items__product_name",
+        "items__item_serial_no",
+    )
     inlines = [ChallanItemInline]
     readonly_fields = ("created_at", "updated_at")
 
@@ -39,13 +47,13 @@ class ChallanAdmin(admin.ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ("name", "phone_no")
-    search_fields = ("name",)
+    search_fields = ("name", "phone_no")
 
 
 @admin.register(Billing)
 class BillingAdmin(admin.ModelAdmin):
     list_display = ("id", "bill_no", "company_name", "client", "adjust_requested", "created_at")
-    search_fields = ("bill_no", "client__name", "company_name__name")
+    search_fields = ("bill_no", "client__name", "company_name__name", "company_name__code")
     filter_horizontal = ("challans",)
 
 
